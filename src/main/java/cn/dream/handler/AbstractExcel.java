@@ -8,6 +8,7 @@ import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
+import lombok.Setter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -25,7 +26,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -131,6 +132,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     protected Sheet sheet;
 
     /**
+     * 当前对象是否是通过其他Excel转换而来；true是，false是通过本地实例的
+     */
+    @Setter
+    protected boolean transfer = false;
+
+    /**
      * 转换为合适的单元格类型
      *
      * @param javaType Java类型
@@ -197,25 +204,35 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected Map<Field,String> cacheMergeFieldGroupKeyMap = null;
 
+    /**
+     * 保存未执行完成的任务
+     */
+    protected List<Consumer<AbstractExcel<?>>> taskConsumer = new ArrayList<>();
+
     protected AbstractExcel(){
-        this(false);
+        recordDataValidatorMap = new HashMap<>();
+        recordAutoColumnMap = new HashMap<>();
+        recordCellAddressRangeMap = new LinkedHashMap<>();
+        cacheMergeFieldListMap = new HashMap<>();
+        cacheMergeFieldGroupKeyMap = new HashMap<>();
+
+        if(this.workbook != null){
+            // 初始化操作
+            globalCellStyle = workbook.createCellStyle();
+        } else {
+            taskConsumer.add((abstractExcel)->{
+                abstractExcel.globalCellStyle = workbook.createCellStyle();
+            });
+        }
     }
 
-    /**
-     * 是否是初始化这些对象的值
-     * @param init
-     */
-    protected AbstractExcel(boolean init){
-        if(init){
-            recordDataValidatorMap = new HashMap<>();
-            recordAutoColumnMap = new HashMap<>();
-            recordCellAddressRangeMap = new LinkedHashMap<>();
-            cacheMergeFieldListMap = new HashMap<>();
-            cacheMergeFieldGroupKeyMap = new HashMap<>();
+    public void initConsumerData(){
+        taskConsumer.forEach(c -> c.accept(this));
+        taskConsumer.clear();
+    }
 
-            cacheCellStyleMap = Collections.synchronizedMap(new HashMap<>());
-
-        }
+    public void oneInit(){
+        cacheCellStyleMap = Collections.synchronizedMap(new HashMap<>());
     }
 
     /**
@@ -249,12 +266,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param dataCls
      * @param dataColl
      */
-    protected void setSheetData(Class<?> dataCls, Collection<?> dataColl){
+    protected <T> void setSheetData(Class<T> dataCls, List<T> dataColl){
         Field[] notStaticAndFinalFields = ReflectionUtils.getNotStaticAndFinalFields(dataCls);
         Field[] fields = Arrays.stream(notStaticAndFinalFields).filter(field -> field.isAnnotationPresent(ExcelField.class)).peek(org.springframework.util.ReflectionUtils::makeAccessible).collect(Collectors.toList()).toArray(notStaticAndFinalFields);
 
         List<Field> unmodifiableList = Collections.unmodifiableList(new ArrayList<>(Arrays.asList(fields)));
-        this.sheetData = new SheetData(dataCls, unmodifiableList, dataColl);
+        this.sheetData = new SheetData<T>(dataCls, unmodifiableList, dataColl);
     }
 
     public SheetData getSheetData(){
@@ -749,10 +766,18 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         recordDataValidatorMap.clear();
     }
 
+    protected abstract void flushData();
 
+    /**
+     * 通过 newInstance 进行实例化的调用此方法
+     * @param outputFile
+     * @throws IOException
+     */
     public void write(File outputFile) throws IOException {
         write(this.workbook,this.sheet,outputFile);
     }
+
+
 
     /**
      * 将最终的数据及存放的缓存验证对等信息一同写入到Excel中
@@ -762,6 +787,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @throws IOException
      */
     protected void write(Workbook workbook, Sheet sheet, File outputFile) throws IOException {
+        Validate.isTrue(!this.transfer,"转换对象不能操作此方法写入数据,请通过flushData进行写入数据");
         Validate.isTrue(!this.embeddedObject,"嵌入对象不能操作Write方法");
         writeData(sheet);
         try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {

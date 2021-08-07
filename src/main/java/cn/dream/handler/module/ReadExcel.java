@@ -21,21 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ReadExcel extends AbstractExcel<ReadExcel> {
 
-    /**
-     * 读取指定Sheet名称的Sheet对象，并返回
-     * @param sheetName
-     * @return
-     */
-    public ReadExcel readSheet(String sheetName) {
-        ReadExcel readExcel = new ReadExcel();
-        BeanUtils.copyProperties(this,readExcel, WorkbookPropScope.class);
-        readExcel.toggleSheet(sheetName);;
-        return readExcel;
-    }
 
     public void toggleSheet(int sheetAt){
         toggleSheet(this.workbook.getSheetName(sheetAt));
@@ -57,8 +45,8 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
     }
 
     @Override
-    protected void setSheetData(Class<?> dataCls, Collection<?> dataColl) {
-        super.setSheetData(dataCls, dataColl);
+    protected <T> void setSheetData(Class<T> dataCls, List<T> dataList) {
+        super.setSheetData(dataCls, dataList);
     }
 
     public void write(File outputFile) throws IOException {
@@ -93,32 +81,27 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 continue;
             }
             // 处理body data的内容
-            putBodyDataByLocation(rowIndex,sheetData.getDataColl());
+            putBodyDataByLocation(rowIndex);
         }
 
     }
 
     /**
      * 将集合转换为指定类型
-     * @param ofType
      * @param <T>
      * @return
      */
-    public <T> List<T> asType(Class<T> ofType){
-        Validate.notNull(ofType);
-        SheetData sheetData = getSheetData();
-        Class<?> dataCls = sheetData.getDataCls();
-        Validate.isTrue(ofType.isAssignableFrom(dataCls),"集合元素的类型不兼容");
-        return sheetData.getDataColl().parallelStream().map(v -> (T) v).sequential().collect(Collectors.toList());
+    public <T> List<T> getResult(){
+        SheetData<T> sheetData = getSheetData();
+        return sheetData.getDataList();
     }
 
     /**
      * 根据列的位置放置数据
      * @param rowIndex
-     * @param resultList
      * @throws IllegalAccessException
      */
-    public void putBodyDataByLocation(int rowIndex,List<Object> resultList) throws IllegalAccessException {
+    public void putBodyDataByLocation(int rowIndex) throws IllegalAccessException {
 
         SheetData sheetData = getSheetData();
 
@@ -140,7 +123,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             field.set(newInstance,cellValue);
 
         }
-        resultList.add(newInstance);
+        sheetData.getDataList().add(newInstance);
     }
 
     private final List<HeaderInfo> headerInfoList = new ArrayList<>();
@@ -249,23 +232,41 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         return sheet.getRow(cellRangeAddress.getFirstRow()).getCell(cellRangeAddress.getFirstColumn());
     }
 
-
-    public static ReadExcel newInstance(Workbook workbook) {
-        ReadExcel readExcel = new ReadExcel(workbook);
+    /**
+     * 读取指定Sheet名称的Sheet对象，并返回
+     * @param sheetName
+     * @return
+     */
+    public ReadExcel readSheet(String sheetName) {
+        ReadExcel readExcel = new ReadExcel();
+        BeanUtils.copyProperties(this,readExcel, WorkbookPropScope.class);
+        readExcel.initConsumerData();
+        readExcel.toggleSheet(sheetName);
+        readExcel.embeddedObject = true;
         return readExcel;
     }
 
-    private ReadExcel(){
-        globalCellStyle = workbook.createCellStyle();
+    /**
+     * 每个单独的对象都需要执行一遍这个操作，以便将缓存的操作信息刷新到WorkBook中
+     */
+    @Override
+    public void flushData() {
+        writeData(this.sheet);
     }
+
+    public static ReadExcel newInstance(Workbook workbook) {
+        ReadExcel readExcel = new ReadExcel(workbook);
+        readExcel.oneInit();
+        return readExcel;
+    }
+
+    private ReadExcel(){}
 
     private ReadExcel(Workbook workbook){
-        super(true);
+        super();
         this.workbook = workbook;
 
-        // 初始化操作
-        globalCellStyle = workbook.createCellStyle();
+        initConsumerData();
     }
-
 
 }

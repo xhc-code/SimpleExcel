@@ -3,7 +3,6 @@ package cn.dream.test;
 import cn.dream.handler.module.ReadExcel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +19,7 @@ public class ReadExcelTest {
     private static ClassPathResource classPathResource;
 
     private static File readFile = null;
+    private static ReadExcel readExcel = null;
 
     @BeforeAll
     public static void init() throws IOException {
@@ -33,22 +33,34 @@ public class ReadExcelTest {
         }
 
         readFile = new File(file, "读取的数据模板.xlsx");
+
+        readExcel = ReadExcel.newInstance(WorkbookFactory.create(readFile));
     }
 
 
     @Test
     public void test1() throws IOException, IllegalAccessException {
-
-        ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(readFile));
         readExcel.setSheetDataCls(StudentTestEntity.class);
         readExcel.toggleSheet(0);
-
         readExcel.readData();
-
-
+        readExcel.getResult().forEach(System.out::println);
 
     }
 
+
+
+    @Test
+    public void test2() throws IOException, IllegalAccessException {
+
+        System.err.println("-------------------------------");
+
+        ReadExcel readExcel2 = readExcel.readSheet("Sheet3");
+
+        readExcel2.setSheetDataCls(StudentTestEntity.class);
+        readExcel2.readData();
+        readExcel2.getResult().forEach(System.out::println);
+
+    }
 
 
 

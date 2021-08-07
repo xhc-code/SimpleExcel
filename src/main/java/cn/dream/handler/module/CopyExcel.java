@@ -2,7 +2,6 @@ package cn.dream.handler.module;
 
 import cn.dream.handler.AbstractExcel;
 import cn.dream.handler.WorkbookPropScope;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -10,17 +9,11 @@ import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.springframework.beans.BeanUtils;
-import sun.awt.OverrideNativeWindowHandle;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 /**
  * CopyExcel 复制Excel的操作
@@ -31,21 +24,41 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
     private Workbook fromWorkbook;
     private Sheet fromSheet;
 
-
     private CopyExcel(){
-        globalCellStyle = workbook.createCellStyle();
     }
 
     private CopyExcel(Workbook fromWorkbook,Workbook workbook){
-        super(true);
+        super();
         this.fromWorkbook = fromWorkbook;
         this.workbook = workbook;
 
-        globalCellStyle = workbook.createCellStyle();
+        initConsumerData();
+    }
+
+    @Override
+    public CopyExcel newSheet(String sheetName) {
+        CopyExcel copyExcel = new CopyExcel();
+        BeanUtils.copyProperties(this,copyExcel, WorkbookPropScope.class);
+        copyExcel.initConsumerData();
+        copyExcel.createSheet(sheetName);
+        copyExcel.embeddedObject = true;
+        return copyExcel;
     }
 
     public static CopyExcel newInstance(Workbook fromWorkbook,Workbook workbook){
-        return new CopyExcel(fromWorkbook, workbook);
+        CopyExcel copyExcel = new CopyExcel(fromWorkbook, workbook);
+        copyExcel.oneInit();
+        return copyExcel;
+    }
+
+    /**
+     * 创建COpyExcel的对象
+     * @return
+     */
+    public WriteExcel newWriteExcel(){
+        WriteExcel writeExcel = WriteExcel.newInstance(this.workbook);
+        writeExcel.setTransfer(true);
+        return writeExcel;
     }
 
     @Getter
@@ -291,12 +304,19 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         this.fromSheet = this.fromWorkbook.getSheetAt(sheetIndex);
     }
 
+
     @Override
-    public CopyExcel newSheet(String sheetName) {
-        CopyExcel copyExcel = new CopyExcel();
-        BeanUtils.copyProperties(this,copyExcel, WorkbookPropScope.class);
-        copyExcel.createSheet(sheetName);
-        return copyExcel;
+    public void write(File outputFile) throws IOException {
+        Validate.isTrue(!transfer,"不能调用此方法,请 调用 write() 方法写入数据");
+        super.write(outputFile);
+    }
+
+    /**
+     * 每个单独的对象都需要执行一遍这个操作，以便将缓存的操作信息刷新到WorkBook中
+     */
+    @Override
+    public void flushData() {
+        writeData(this.sheet);
     }
 
 }

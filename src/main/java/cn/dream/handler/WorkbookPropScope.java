@@ -1,14 +1,10 @@
 package cn.dream.handler;
 
-import cn.dream.handler.bo.CellAddressRange;
-import cn.dream.handler.bo.RecordDataValidator;
-import cn.dream.handler.bo.SheetData;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
-import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,9 +19,12 @@ public abstract class WorkbookPropScope {
     /**
      * 单元格样式缓存Map,避免创建过多的样式对象
      */
+    @Setter
+    @Getter
     protected Map<Integer, CellStyle> cacheCellStyleMap;
 
+    @Setter
+    @Getter
     protected Workbook workbook;
-
 
 }

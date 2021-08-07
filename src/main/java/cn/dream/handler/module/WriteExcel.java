@@ -44,8 +44,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
     }
 
     @Override
-    public void setSheetData(Class<?> dataCls, Collection<?> dataColl) {
-        super.setSheetData(dataCls, dataColl);
+    public <T> void setSheetData(Class<T> dataCls, List<T> dataList) {
+        super.setSheetData(dataCls, dataList);
     }
 
     /**
@@ -59,7 +59,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         int targetLastRowIndex = this.sheet.getLastRowNum() + 1;
 
         List<Field> fieldList = sheetData.getFieldList();
-        Collection<?> dataColl = sheetData.getDataColl();
+        Collection<?> dataColl = sheetData.getDataList();
 
         AtomicInteger rowIndex = new AtomicInteger(targetLastRowIndex);
         AtomicInteger columnIndex = new AtomicInteger();
@@ -86,30 +86,47 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         iCustomizeCell.customize(this.workbook,this.sheet, cellStyle -> this.createCellStyleIfNotExists(this.workbook,cellStyle));
     }
 
-    private WriteExcel(){
-        globalCellStyle = workbook.createCellStyle();
-    }
+    private WriteExcel(){}
 
     private WriteExcel(Workbook workbook){
-        super(true);
+        super();
         this.workbook = workbook;
+        initConsumerData();
+    }
 
-        // 初始化操作
-        globalCellStyle = workbook.createCellStyle();
+    /**
+     * 每个单独的对象都需要执行一遍这个操作，以便将缓存的操作信息刷新到WorkBook中
+     */
+    @Override
+    public void flushData() {
+        writeData(this.sheet);
     }
 
     @Override
     public WriteExcel newSheet(String sheetName) {
         WriteExcel writeExcel = new WriteExcel();
         BeanUtils.copyProperties(this,writeExcel, WorkbookPropScope.class);
+        writeExcel.initConsumerData();
         writeExcel.createSheet(sheetName);
+        writeExcel.embeddedObject = true;
         return writeExcel;
     }
 
     public static WriteExcel newInstance(Workbook workbook) {
         WriteExcel writeExcel = new WriteExcel(workbook);
+        writeExcel.oneInit();
         return writeExcel;
     }
 
+    /**
+     * 创建COpyExcel的对象
+     * @param fromWorkbook
+     * @return
+     */
+    public CopyExcel newCopyExcel(Workbook fromWorkbook){
+        CopyExcel copyExcel = CopyExcel.newInstance(fromWorkbook, this.workbook);
+        copyExcel.setTransfer(true);
+        return copyExcel;
+    }
 
 }
