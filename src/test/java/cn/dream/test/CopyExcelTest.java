@@ -3,12 +3,10 @@ package cn.dream.test;
 import cn.dream.handler.module.CopyExcel;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootContextLoader;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 
@@ -22,13 +20,14 @@ public class CopyExcelTest {
 
     private static ClassPathResource classPathResource;
 
-    @BeforeAll
-    public static void init(){
-        classPathResource = new ClassPathResource("template");
-    }
+    private static CopyExcel copyExcel;
 
-    @Test
-    public void copyExcel1() throws IOException {
+    private static File targetFile;
+
+
+    @BeforeAll
+    public static void init() throws IOException {
+        classPathResource = new ClassPathResource("template");
 
         File file = classPathResource.getFile();
 
@@ -39,10 +38,14 @@ public class CopyExcelTest {
         file = new File(file, RESULT_PREFIX_DIRECTORY);
         boolean mkdirDire = !file.exists() && file.mkdirs();
 
-        file = new File(file, "CopyExcel模板_结果.xlsx");
+        targetFile = new File(file, "CopyExcel模板_结果.xlsx");
 
 
-        CopyExcel copyExcel = CopyExcel.newInstance(WorkbookFactory.create(modalFile), new XSSFWorkbook());
+        copyExcel = CopyExcel.newInstance(WorkbookFactory.create(modalFile), new XSSFWorkbook());
+    }
+
+    @Test
+    public void copyExcel1() throws IOException {
 
         copyExcel.setPointDataConsumer(pointData -> {
             Object value = pointData.getValue();
@@ -61,30 +64,25 @@ public class CopyExcelTest {
         copyExcel.copyRow(2,0,2,0);
         copyExcel.copyRow(6,0,6,1);
 
-        copyExcel.write(file);
 
     }
 
+    @Test
+    public void test2(){
 
-    public static void main(String[] args) throws IOException {
-        String usr = System.getProperty("user.dir");
-        System.out.println("usr:" + usr);
+        copyExcel.newSheet("我是第二个Sheet");
 
-
-        ClassPathResource classPathResource = new ClassPathResource("template");
-        System.out.println("classPathResource" + classPathResource.getFile().exists());
+        copyExcel.flushData();
 
 
-        final String ss = "abcdfg";
-
-        System.out.println(ss == ss.replace("c","1"));
     }
 
 
     @AfterAll
-    public static void des(){
+    public static void des() throws IOException {
 
 
+        copyExcel.write(targetFile);
 
     }
 

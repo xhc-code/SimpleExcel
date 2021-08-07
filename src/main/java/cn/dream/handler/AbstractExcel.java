@@ -8,7 +8,6 @@ import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
-import lombok.Setter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -134,8 +133,13 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     /**
      * 当前对象是否是通过其他Excel转换而来；true是，false是通过本地实例的
      */
-    @Setter
     protected boolean transfer = false;
+
+    protected void setTransferBeTure(Object o){
+        Validate.notNull(o);
+        Validate.isInstanceOf(AbstractExcel.class,o);
+        ReflectionUtils.setFieldValue(ReflectionUtils.getFieldByFieldName(o,"transfer").get(),o,true);
+    }
 
     /**
      * 转换为合适的单元格类型

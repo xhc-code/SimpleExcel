@@ -57,7 +57,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
      */
     public WriteExcel newWriteExcel(){
         WriteExcel writeExcel = WriteExcel.newInstance(this.workbook);
-        writeExcel.setTransfer(true);
+        setTransferBeTure(writeExcel);
         return writeExcel;
     }
 

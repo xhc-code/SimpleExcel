@@ -1,20 +1,21 @@
 package cn.dream.util;
 
+import cn.dream.excep.NotInstanceClassObjectException;
+import cn.dream.test.StudentTestEntity;
+import cn.dream.util.anno.Feature.RequireCopy;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Validate;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import cn.dream.excep.NotInstanceClassObjectException;
-import cn.dream.test.TestEntity;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.Validate;
-
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "ConstantConditions"})
 @Slf4j
 public class ReflectionUtils {
 
@@ -186,54 +187,116 @@ public class ReflectionUtils {
 	}
 
 
+	private static final Predicate<Field> MAKE_ACCESSIBLE_PREDICATE = field -> {
+		int modifiers = field.getModifiers();
+		if(
+				(!Modifier.isStatic(modifiers)
+				|| !Modifier.isPublic(field.getDeclaringClass().getModifiers()))
+				|| Modifier.isFinal(modifiers)
+		){
+			if(!field.isAccessible()){
+				field.setAccessible(true);
+			}
+			return true;
+		}
+		return false;
+	};
 
-	
-	
-	
-	public static void main(String[] args) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-
-//		newInstance(A.B.class);
-
-
-		boolean memberClass = A.class.isMemberClass();
-		System.out.println(memberClass);
-
-		memberClass = A.B.class.isMemberClass();
-		System.out.println(memberClass);
-
-
-		memberClass = ReflectionUtils.class.isMemberClass();
-		System.out.println(memberClass);
-
-		Object newInstance = _newInstance(A.B.class,new ReflectionUtils(),true);
-		System.out.println(newInstance);
-
-
+	public static Optional<Field> getFieldByFieldName(Object o, String fieldName){
+		Field[] fields = getNotStaticAndFinalFields(o.getClass());
+		return Arrays.stream(fields).filter(field -> field.getName().equals(fieldName)).findFirst();
 	}
 
-
-	public static class A {
-		public class B {
-
+	/**
+	 * 设置字段的值
+	 */
+	public static void setFieldValue(Field field,Object o,Object value) {
+		if(MAKE_ACCESSIBLE_PREDICATE.test(field)){
+			try {
+				field.set(o,value);
+			} catch (IllegalAccessException e) {
+				log.warn("非法访问 {} 属性,通过反射设置值失败",field.getName());
+			}
 		}
 	}
 
+	private static final String[] EMPTY_STRINGS = new String[0];
 
-	public static void test1(){
-		Field[] fields = getFields(TestEntity.class,null,false,field -> {
-			int modifiers = field.getModifiers();
-			if(Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers)) {
-				return false;
+
+	public static void copyProperties(Object source,Object target,String... copyProperties) {
+		copyProperties(source, target, copyProperties,null,null,false);
+	}
+
+	public static void copyProperties(Object source,Object target,Class<?> editable,String... ignoreProperties) {
+		copyProperties(source, target, null,editable,ignoreProperties,false);
+	}
+
+	public static void copyPropertiesByAnno(Object source,Object target,String... ignoreProperties) {
+		copyProperties(source, target, null,null,ignoreProperties,true);
+	}
+
+	/**
+	 * Copy source的属性的值到target中，需要保证字段名称一致
+	 * @param source 源对象
+	 * @param target 目标对象
+	 * @param copyProperties 指定copy的字段名称列表；与editable互斥
+	 * @param editable 限制更新的字段为一个类里包含的字段
+	 * @param ignoreProperties 忽略的属性字段名称
+	 * @param anno 是否开启注解行为;开启注解行为，会忽略 copyProperties 和 editable 属性
+	 */
+	private static void copyProperties(Object source,Object target,String[] copyProperties,Class<?> editable,String[] ignoreProperties,boolean anno){
+		Validate.isTrue(
+				(copyProperties !=null && (editable == null && ignoreProperties == null)) ||
+						(copyProperties ==null && (editable != null ))
+				|| anno
+				,"copyProperties属性和editable为互斥属性");
+
+		Field[] sourceFields = getNotStaticAndFinalFields(source.getClass());
+		Field[] targetFields = getNotStaticAndFinalFields(target.getClass());
+
+		// 基于指定Copy属性的方式复制对象的值
+		List<String> copyPropSet = !anno ? new ArrayList<>(Arrays.asList(Optional.ofNullable(copyProperties).orElseGet(()->{
+			Field[] editableFields = getNotStaticAndFinalFields(editable);
+			Stream<String> stream = Arrays.stream(editableFields).map(Field::getName);
+			if(ignoreProperties != null && ignoreProperties.length > 0){
+				List<String> ignorePropertiesList = Arrays.asList(ignoreProperties);
+				stream = stream.filter(v -> !ignorePropertiesList.contains(v));
 			}
-			return true;
-		});
-		System.out.println(fields);
+			return stream.collect(Collectors.toList()).toArray(EMPTY_STRINGS);
+		}))) : Arrays.asList(targetFields).parallelStream().filter(field -> field.isAnnotationPresent(RequireCopy.class)).map(Field::getName).collect(Collectors.toList());
 
-		System.out.println(TestEntity.class);
-		System.out.println(TestEntity.class);
-		System.out.println(TestEntity.class);
-		System.out.println(TestEntity.class == TestEntity.class);
+		Map<String, Field> sourceFieldMap = Arrays.asList(sourceFields).parallelStream().filter(field -> copyPropSet.contains(field.getName())).collect(Collectors.toConcurrentMap(Field::getName, field -> field));
+		List<Field> copyFieldList = Arrays.asList(targetFields).parallelStream().filter(field -> copyPropSet.contains(field.getName())).sequential().collect(Collectors.toList());
+
+		copyFieldList.forEach(field -> {
+			String fieldName = field.getName();
+			Field sourceField = sourceFieldMap.get(fieldName);
+
+			MAKE_ACCESSIBLE_PREDICATE.test(sourceField);
+			MAKE_ACCESSIBLE_PREDICATE.test(field);
+
+			try {
+				field.set(target,sourceField.get(source));
+			} catch (IllegalAccessException e) {
+				log.warn("找不到 {} 属性",fieldName);
+			}
+		});
 
 	}
+
+	public static void main(String[] args) {
+
+		StudentTestEntity studentTestEntity = new StudentTestEntity();
+		studentTestEntity.setAge(27);
+		studentTestEntity.setName("我是恶魔");
+
+		StudentTestEntity studentTestEntity2 = new StudentTestEntity();
+		copyPropertiesByAnno(studentTestEntity,studentTestEntity2);
+
+		System.out.println(studentTestEntity);
+		System.out.println(studentTestEntity2);
+	}
+
+
 
 }
