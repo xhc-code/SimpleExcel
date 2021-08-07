@@ -1,38 +1,44 @@
 package cn.dream.anno.handler.excelfield;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-
+@Slf4j
 @SuppressWarnings("unchecked")
 public class DefaultFormatValueAnnoHandler {
 
-	private static Set<Class<?>> allowTypeSet = new LinkedHashSet();
+	private static final Set<Class<?>> ALLOW_TYPE_SET = new LinkedHashSet<>();
 	
 	static {
 		
-		allowTypeSet.add(String.class);
-		allowTypeSet.add(Byte.class);
-		allowTypeSet.add(Short.class);
-		allowTypeSet.add(Integer.class);
-		allowTypeSet.add(Long.class);
-		allowTypeSet.add(Float.class);
-		allowTypeSet.add(Double.class);
-		allowTypeSet.add(Boolean.class);
-		allowTypeSet.add(Date.class);
+		ALLOW_TYPE_SET.add(String.class);
+		ALLOW_TYPE_SET.add(Byte.class);
+		ALLOW_TYPE_SET.add(Short.class);
+		ALLOW_TYPE_SET.add(Integer.class);
+		ALLOW_TYPE_SET.add(Long.class);
+		ALLOW_TYPE_SET.add(Float.class);
+		ALLOW_TYPE_SET.add(Double.class);
+		ALLOW_TYPE_SET.add(Boolean.class);
+		ALLOW_TYPE_SET.add(Date.class);
 		
 	}
 	
 	public Set<Class<?>> getAllowTypeSet(){
-		return allowTypeSet;
+		return ALLOW_TYPE_SET;
 	}
-	
+
+	/**
+	 * 检查值是否符合基本类型，并且不为null
+	 * @param o
+	 * @return
+	 */
 	public final boolean check(Object o) {
 		if(ObjectUtils.isEmpty(o)){
 			return false;
@@ -41,12 +47,10 @@ public class DefaultFormatValueAnnoHandler {
 		Set<Class<?>> a = getAllowTypeSet();
 		if(a != null) {
 			Class<?> oClass = o.getClass();
-//			if(String.class.isAssignableFrom(oClass) && StringUtils.isEmpty(o.toString())){
-//				return false;
-//			}
 			return a.contains(oClass);
 		}
-		// TODO wran log 仅支持。。。。。。。。类型参数
+		//noinspection ConstantConditions
+		log.warn("仅支持 {} 类型",getAllowTypeSet().stream().map(Class::getSimpleName).collect(Collectors.joining(",")));
 		return false;
 	}
 	

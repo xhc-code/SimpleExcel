@@ -113,27 +113,3 @@ public @interface ExcelField {
 
 }
 
-
-/**
- *
- * 导入时
- * 		validateHeader
- *
- * 值写入顺序
- *
- *   apply
- *   	autoColumnHeight
- *   	cellStyleCls
- *   	handlerWriteValue ↘
- *   		formatValueCls
- *   			if val==null defaultValue
- *   			converterValueExpression | converterValueCls
- *   			selectValues | selectValueListCls
- *
- *
- *
- *
- *
- *
- *
- * */

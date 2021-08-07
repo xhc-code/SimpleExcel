@@ -120,9 +120,13 @@ public class ReflectionUtils {
 	private static final Map<Class<?>,Object> CACHE_CLASS_INSTANCE_MAP = new HashMap<>();
 
 
-	public static <T> T newInstance(Class<T> cls){
+	public static <T> T newInstance(Class<T> cls) {
+		return newInstance(cls,true);
+	}
+
+	public static <T> T newInstance(Class<T> cls,boolean single){
 		try {
-			return (T) _newInstance(cls,null);
+			return (T) _newInstance(cls,null,single);
 		} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
 			NotInstanceClassObjectException notInstanceClassObjectException = new NotInstanceClassObjectException();
 			notInstanceClassObjectException.addSuppressed(e);
@@ -130,9 +134,13 @@ public class ReflectionUtils {
 		}
 	}
 
-	public static <T> T newInnerInstance(Class<T> cls,Object o){
+	public static <T> T newInnerInstance(Class<T> cls,Object o) {
+		return newInnerInstance(cls,o,true);
+	}
+
+	public static <T> T newInnerInstance(Class<T> cls,Object o,boolean single){
 		try {
-			return (T) _newInstance(cls,o);
+			return (T) _newInstance(cls,o,single);
 		} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
 			NotInstanceClassObjectException notInstanceClassObjectException = new NotInstanceClassObjectException();
 			notInstanceClassObjectException.addSuppressed(e);
@@ -150,9 +158,9 @@ public class ReflectionUtils {
 	 * @throws NoSuchMethodException
 	 * @throws InvocationTargetException
 	 */
-	private static Object _newInstance(Class<?> cls, Object o) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+	private static Object _newInstance(Class<?> cls, Object o, boolean single) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
 		Object newInstance;
-		if(CACHE_CLASS_INSTANCE_MAP.containsKey(cls)){
+		if(single && CACHE_CLASS_INSTANCE_MAP.containsKey(cls)){
 			log.debug("从缓存Map中取出实例化Class对象,{}",cls.getName());
 			return CACHE_CLASS_INSTANCE_MAP.get(cls);
 		}
@@ -171,7 +179,9 @@ public class ReflectionUtils {
 		}else{
 			newInstance = cls.newInstance();
 		}
-		CACHE_CLASS_INSTANCE_MAP.putIfAbsent(cls, newInstance);
+		if(single){
+			CACHE_CLASS_INSTANCE_MAP.putIfAbsent(cls, newInstance);
+		}
 		return newInstance;
 	}
 
@@ -195,7 +205,7 @@ public class ReflectionUtils {
 		memberClass = ReflectionUtils.class.isMemberClass();
 		System.out.println(memberClass);
 
-		Object newInstance = _newInstance(A.B.class,new ReflectionUtils());
+		Object newInstance = _newInstance(A.B.class,new ReflectionUtils(),true);
 		System.out.println(newInstance);
 
 

@@ -1,13 +1,9 @@
 package cn.dream.anno.handler.excelfield;
 
-import cn.dream.ExcelOperate;
 import cn.dream.enu.HandlerTypeEnum;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.xssf.usermodel.DefaultIndexedColorMap;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 
 public class DefaultExcelFieldStyleAnnoHandler {
 

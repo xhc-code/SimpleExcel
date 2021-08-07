@@ -34,50 +34,10 @@ public class App
 //    @Bean
     public ApplicationRunner applicationRunner1(ApplicationContext applicationContext){
         return (args)->{
-            test1();
-
-            System.out.println("完成");
-
             SpringApplication.exit(applicationContext);
         };
     }
 
-
-    public static void test2(){
-        ExcelOperate excelOperate = ExcelOperate.newWorkBook(new File("F:\\simple-excel\\testModel\\模板Excel.xlsx"));
-        excelOperate.createSheet("测试目标",true);
-
-        StudentTestEntity studentTestEntity = new StudentTestEntity();
-
-        excelOperate.setDataCls(StudentTestEntity.class, Arrays.asList(studentTestEntity));
-        excelOperate.generateHeader();
-
-        CellStyle cellStyle = excelOperate.targetCurrentSheet.getWorkbook().createCellStyle();
-        CellStyle cellStyle1 = excelOperate.targetCurrentSheet.getWorkbook().createCellStyle();
-        System.out.println(cellStyle1 == cellStyle);
-
-    }
-    
-    public static void test1() throws IOException {
-        ExcelOperate excelOperate = ExcelOperate.newWorkBook(new File("F:\\simple-excel\\testModel\\模板Excel.xlsx"));
-        excelOperate.createSheet("测试目标",true);
-
-        StudentTestEntity studentTestEntity = new StudentTestEntity();
-        studentTestEntity.setUid("001");
-        studentTestEntity.setName("恶魔先生557");
-        studentTestEntity.setAge(25);
-
-        excelOperate.setDataCls(StudentTestEntity.class, Arrays.asList(studentTestEntity));
-        excelOperate.generateHeader();
-        excelOperate.generateBody();
-
-        excelOperate.copyRow(8,3,1,7);
-        excelOperate.copyRow(9,4,1,7);
-        excelOperate.copyRow(19,19,3,0);
-
-
-        excelOperate.write("F:\\simple-excel\\testModel\\结果Excel.xlsx");
-    }
 
     
 }

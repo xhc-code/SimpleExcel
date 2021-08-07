@@ -44,7 +44,9 @@ public class DefaultConverterValueAnnoHandler {
 	 * @return
 	 */
 	public void fillConverterValue(Map<String,String> dictDataMap) {
-		// TODO 这里是用户可以自行往字典Map中放值
+		/**
+		 * 这里是用户可以自行往字典Map中放值
+		 */
 	}
 
 
@@ -57,6 +59,16 @@ public class DefaultConverterValueAnnoHandler {
 	public void doConverterValue(Map<String,String> dictDataMap,AtomicReference<Class<?>> javaTypeCls,AtomicReference<Object> value){
 
 		// todo 添加个自动单映射和多映射的操作
+
+	}
+
+	// 导入的功能也需要做下，记得校验表头
+
+	private void simpleMapping(){
+
+	}
+
+	private void multiMapping(){
 
 	}
 
