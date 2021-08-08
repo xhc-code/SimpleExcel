@@ -15,7 +15,7 @@ import java.util.List;
 public class SheetData<T> {
 
     private final Class<T> dataCls;
-    private Excel clsExcel;
+    private Excel excelAnno;
     /**
      * 包含 ExcelField 注解的 字段列表
      */
@@ -29,7 +29,7 @@ public class SheetData<T> {
         this.dataList = dataList;
 
         if (this.dataCls.isAnnotationPresent(Excel.class)) {
-            this.clsExcel = dataCls.getAnnotation(Excel.class);
+            this.excelAnno = dataCls.getAnnotation(Excel.class);
         }
     }
 

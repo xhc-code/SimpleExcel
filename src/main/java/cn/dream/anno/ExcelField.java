@@ -1,14 +1,13 @@
 package cn.dream.anno;
 
-import static java.lang.annotation.ElementType.FIELD;
+import cn.dream.anno.handler.excelfield.*;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.function.Function;
 
-import cn.dream.anno.handler.excelfield.*;
+import static java.lang.annotation.ElementType.FIELD;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -28,7 +27,13 @@ public @interface ExcelField {
 	Class<?> type() default Class.class;
 
 	/**
-	 * 验证标题头是否名称一致，这是为了防止导入错误的Excel数据
+	 * 验证的HeaderName名称,如果validateHeader为true,并且 validateHeaderName非空，从此名称进行获取并验证HeaderName,否则 值来源与name
+	 * @return
+	 */
+	String validateHeaderName() default "";
+
+	/**
+	 * 验证标题头是否名称一致，这是为了防止导入错误的Excel数据;仅在根据索引位置填充数据时有效
 	 * @return true标识需要验证标题头，false不验证
 	 */
 	boolean validateHeader() default false ;

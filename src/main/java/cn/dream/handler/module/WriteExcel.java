@@ -23,7 +23,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         Validate.notNull(getSheet());
 
         SheetData sheetData = getSheetData();
-        Excel excelAnno = sheetData.getClsExcel();
+        Excel excelAnno = sheetData.getExcelAnno();
 
         List<Field> fields = sheetData.getFieldList();
 

@@ -1,8 +1,8 @@
 package cn.dream.anno;
 
-import java.lang.annotation.*;
-
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
+
+import java.lang.annotation.*;
 
 /**
  * Excel定义实体的全局规则
@@ -55,16 +55,9 @@ public @interface Excel {
 
 
 	/**
-	 * 是否根据 HeaderName进行填充值
+	 * 是否根据 HeaderName进行填充值；true是根据headerName填充,false是根据列索引填充值
 	 * @return
 	 */
 	boolean byHeaderName() default false;
-			// TODO 应该会有个问题，手动添加合并单元格，设置的样式好像会有问题，无法全部生效
-
-	/**
-	 * 必选的
-	 * @return
-	 */
-	boolean required() default true;
 
 }

@@ -1,6 +1,7 @@
 package cn.dream.handler.module;
 
 import cn.dream.anno.Excel;
+import cn.dream.anno.ExcelField;
 import cn.dream.handler.AbstractExcel;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
@@ -8,6 +9,7 @@ import cn.dream.util.ValueTypeUtils;
 import com.sun.xml.internal.ws.addressing.model.ActionNotSupportedException;
 import lombok.*;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -19,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ReadExcel extends AbstractExcel<ReadExcel> {
 
@@ -54,7 +57,11 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
     public void readData() throws IllegalAccessException {
         SheetData sheetData = getSheetData();
 
-        Excel clsExcel = sheetData.getClsExcel();
+        Excel clsExcel = sheetData.getExcelAnno();
+
+        int dataFirstRowIndex = clsExcel.dataFirstRowIndex();
+
+
 
         int firstRowNum = getSheet().getFirstRowNum();
         int lastRowNum = getSheet().getLastRowNum();
@@ -71,11 +78,19 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             headerRowRangeIndex = new int[] {firstRowNum,firstRowNum + firstLastRowIndex};
         }
 
+        // 校验数据首行是否在表头的范围
+        Validate.isTrue(dataFirstRowIndex == -1 || (dataFirstRowIndex >= headerRowRangeIndex[0] && dataFirstRowIndex <= headerRowRangeIndex[0]),"当前表头行范围包含当前数据行，这可能不是你所期望的情况;数据起始行: %d - 表头范围: %s",headerRowRangeIndex,Arrays.toString(headerRowRangeIndex) );
+
         for(int rowIndex=firstRowNum;rowIndex <= lastRowNum; rowIndex++) {
             if(rowIndex >= headerRowRangeIndex[0] && rowIndex <= headerRowRangeIndex[1]){
                 // 处理Header的内容
                 putHeaderInfo(getSheet(),headerRowRangeIndex);
+                // 这里rowIndex 到和单元格的末尾行
                 rowIndex += (headerRowRangeIndex[1] - headerRowRangeIndex[0]);
+
+                if(dataFirstRowIndex>-1 && dataFirstRowIndex > rowIndex){
+                    rowIndex = dataFirstRowIndex;
+                }
                 continue;
             }
             // 处理body data的内容
@@ -106,13 +121,38 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         Class<?> dataCls = sheetData.getDataCls();
         List<Field> fieldList = sheetData.getFieldList();
 
+        Excel excelAnno = sheetData.getExcelAnno();
+
+        boolean byHeaderName = excelAnno.byHeaderName();
+        Map<String, Field> fieldMap = null;
+
+        if(byHeaderName){
+            fieldMap = fieldList.stream().collect(Collectors.toMap(Field::getName, field -> field));
+        }
+
         Row row = getSheet().getRow(rowIndex);
 
         // 按照索引填充数据
         Object newInstance = ReflectionUtils.newInstance(dataCls,false);
+
+        Field field;
         for (int i = 0; i < headerInfoList.size(); i++) {
             HeaderInfo headerInfo = headerInfoList.get(i);
-            Field field = fieldList.get(i);
+            if(byHeaderName){
+                String headerNameAsString = headerInfo.getHeaderNameAsString();
+                field = fieldMap.get(headerNameAsString);
+                Validate.notNull(field, "没有找到名称为 %s 的字段对象",headerNameAsString);
+            }else{
+                field = fieldList.get(i);
+                ExcelField annotation = field.getAnnotation(ExcelField.class);
+                if(annotation != null && annotation.validateHeader()){
+                    String headerName = annotation.validateHeaderName();
+                    if(StringUtils.isEmpty(headerName)){
+                        headerName = annotation.name();
+                    }
+                    Validate.isTrue(headerName.equals(headerInfo.getHeaderNameAsString()),"Header表头不一致(AnnoHeader - ExcelHeader)：%s - %s",headerName,headerInfo.getHeaderNameAsString());
+                }
+            }
 
             Cell cell = row.getCell(headerInfo.getColIndex());
 
