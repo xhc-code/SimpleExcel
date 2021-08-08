@@ -1,8 +1,9 @@
 package cn.dream.test;
 
 import cn.dream.handler.module.CopyExcel;
+import cn.dream.handler.module.WriteExcel;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,16 +65,41 @@ public class CopyExcelTest {
         copyExcel.copyRow(2,0,2,0);
         copyExcel.copyRow(6,0,6,1);
 
+        copyExcel.flushData();
 
     }
 
     @Test
     public void test2(){
 
-        copyExcel.newSheet("我是第二个Sheet");
+        CopyExcel copyExcel1 = copyExcel.newSheet("我是第二个Sheet");
 
-        copyExcel.flushData();
+        copyExcel1.flushData();
 
+
+    }
+
+
+    @Test
+    public void test3(){
+
+        WriteExcel writeExcel = copyExcel.newWriteExcel();
+        writeExcel.createSheet("我是copy里的写入的");
+
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+
+            Row row = sheet.createRow(1);
+            Cell cell = row.createCell(1);
+            cell.setCellValue("我是第二个Sheet");
+
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cell.setCellStyle(putCellStyle.apply(cellStyle));
+
+        });
+
+        writeExcel.flushData();
 
     }
 

@@ -1,18 +1,21 @@
 package cn.dream.handler.module;
 
 import cn.dream.handler.AbstractExcel;
-import cn.dream.handler.WorkbookPropScope;
+import cn.dream.util.ReflectionUtils;
+import cn.dream.util.anno.Feature.RequireCopy;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.springframework.beans.BeanUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -21,7 +24,9 @@ import java.util.function.Consumer;
 @SuppressWarnings("DuplicatedCode")
 public class CopyExcel extends AbstractExcel<CopyExcel> {
 
+    @RequireCopy
     private Workbook fromWorkbook;
+    @RequireCopy
     private Sheet fromSheet;
 
     private CopyExcel(){
@@ -35,10 +40,20 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         initConsumerData();
     }
 
+    protected Workbook getFromWorkbook(){
+        Validate.notNull(this.fromWorkbook,"当前未设置工作簿对象，请设置Workbook对象");
+        return this.fromWorkbook;
+    }
+
+    protected Sheet getFromSheet(){
+        Validate.notNull(this.fromSheet,"当前未设置Sheet对象,请通过相关API进行设置");
+        return this.fromSheet;
+    }
+
     @Override
     public CopyExcel newSheet(String sheetName) {
         CopyExcel copyExcel = new CopyExcel();
-        BeanUtils.copyProperties(this,copyExcel, WorkbookPropScope.class);
+        ReflectionUtils.copyPropertiesByAnno(this,copyExcel);
         copyExcel.initConsumerData();
         copyExcel.createSheet(sheetName);
         copyExcel.embeddedObject = true;
@@ -56,7 +71,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
      * @return
      */
     public WriteExcel newWriteExcel(){
-        WriteExcel writeExcel = WriteExcel.newInstance(this.workbook);
+        WriteExcel writeExcel = WriteExcel.newInstance(getWorkbook());
         setTransferBeTure(writeExcel);
         return writeExcel;
     }
@@ -110,12 +125,12 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
      * @param targetColIndex target列索引
      */
     public void copyRow(int modelRowIndex, int modelColIndex, int targetRowIndex, int targetColIndex) {
-        Validate.notNull(this.fromWorkbook);
-        Validate.notNull(this.fromSheet);
+        Validate.notNull(getFromWorkbook());
+        Validate.notNull(getFromSheet());
         Validate.isTrue(modelRowIndex > -1, "模型行索引必须大于0");
         Validate.isTrue(targetRowIndex > -1, "目标行索引必须大于0");
 
-        Row row = this.fromSheet.getRow(modelRowIndex);
+        Row row = getFromSheet().getRow(modelRowIndex);
         short firstCellNum = row.getFirstCellNum();
         short lastCellNum = row.getLastCellNum();
         for (int i = (modelColIndex > firstCellNum) ? modelColIndex : firstCellNum; i < lastCellNum; i++) {
@@ -147,7 +162,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
 
         PointData pointData = new PointData();
 
-        CellRangeAddress rangeRegion = getCellRangeAddress(this.fromSheet,cell);
+        CellRangeAddress rangeRegion = getCellRangeAddress(getFromSheet(),cell);
         if (rangeRegion != null) {
             if (useCellRangeAddressSet.contains(rangeRegion)) {
                 return false;
@@ -169,10 +184,10 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             copyRangeAddressCell(rangeRegion, newCellRangeAddress);
 
             // 处理合并单元格的值
-            Cell sourceFirstCell = getFirstCell(this.fromSheet, rangeRegion);
+            Cell sourceFirstCell = getFirstCell(getFromSheet(), rangeRegion);
             Object cellValue = getCellValue(sourceFirstCell);
 
-            Cell toFirstCell = getFirstCell(this.sheet, newCellRangeAddress);
+            Cell toFirstCell = getFirstCell(getSheet(), newCellRangeAddress);
 
 
             pointData.setValue(cellValue);
@@ -198,7 +213,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             return true;
         } else {
             // 不是 合并单元格 类型
-            Row targetCurrentSheetRow = createRowIfNotExists(this.sheet,rowIndex);
+            Row targetCurrentSheetRow = createRowIfNotExists(getSheet(),rowIndex);
 
             Cell targetCurrentSheetRowCell = createCellIfNotExists(targetCurrentSheetRow,colIndex);
 
@@ -234,9 +249,18 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         return super.createCellStyleIfNotExists(cellStyle);
     }
 
+    /**
+     * 位置点处理数据，在写入Workbook之前
+     */
     @Setter
+    @RequireCopy
     private Consumer<PointData> pointDataConsumer;
+
+    /**
+     * 设置样式
+     */
     @Setter
+    @RequireCopy
     private IHandlerCellStyle iHandlerCellStyle;
 
     @FunctionalInterface
@@ -260,12 +284,12 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
 
             int relatedRowId = modelRowId - modelRange.getFirstRow();
 
-            Row targetRow = createRowIfNotExists(this.sheet, targetRange.getFirstRow() + relatedRowId);
+            Row targetRow = createRowIfNotExists(getSheet(), targetRange.getFirstRow() + relatedRowId);
 
             modelColId = modelRange.getFirstColumn();
             while (modelColId <= modelRange.getLastColumn()) {
 
-                Cell cell = this.fromSheet.getRow(modelRowId).getCell(modelColId);
+                Cell cell = getFromSheet().getRow(modelRowId).getCell(modelColId);
                 if (cell == null) {
                     modelColId++;
                     continue;
@@ -280,7 +304,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             }
         }
 
-        this.sheet.addMergedRegion(targetRange);
+        getSheet().addMergedRegion(targetRange);
 
 
         /**
@@ -292,16 +316,16 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
 
     protected void toggleSheet(String sheetName) {
         String safeSheetName = validatePassReturnSafeSheetName(sheetName);
-        this.sheet = this.workbook.getSheet(safeSheetName);
+        this.sheet = getWorkbook().getSheet(safeSheetName);
     }
 
     public void toggleFromSheet(String sheetName) {
         String safeSheetName = validatePassReturnSafeSheetName(sheetName);
-        toggleFromSheet(this.fromWorkbook.getSheetIndex(safeSheetName));
+        toggleFromSheet(getFromWorkbook().getSheetIndex(safeSheetName));
     }
 
     public void toggleFromSheet(int sheetIndex){
-        this.fromSheet = this.fromWorkbook.getSheetAt(sheetIndex);
+        this.fromSheet = getFromWorkbook().getSheetAt(sheetIndex);
     }
 
 
@@ -316,7 +340,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
      */
     @Override
     public void flushData() {
-        writeData(this.sheet);
+        writeData(getSheet());
     }
 
 }

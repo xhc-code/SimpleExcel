@@ -2,10 +2,10 @@ package cn.dream.test;
 
 import cn.dream.handler.module.WriteExcel;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
@@ -36,10 +36,14 @@ public class WriteExcelTest {
 
         targetFile = new File(file, "writeExcel结果.xlsx");
 
+        writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
+
         initData();
     }
 
     private static List<StudentTestEntity> studentTestEntityList = new ArrayList<>();
+
+    static WriteExcel writeExcel = null;
 
     public static void initData(){
         StudentTestEntity studentTestEntity = new StudentTestEntity();
@@ -64,7 +68,6 @@ public class WriteExcelTest {
     @Test
     public void test1() throws IOException, InvalidFormatException {
 
-        WriteExcel writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
         writeExcel.createSheet("我是学生列表");
 
         writeExcel.setSheetData(StudentTestEntity.class,studentTestEntityList);
@@ -72,9 +75,36 @@ public class WriteExcelTest {
         writeExcel.generateHeader();
         writeExcel.generateBody();
 
-        writeExcel.write(targetFile);
+
+    }
+
+    @Test
+    public void test2(){
+        WriteExcel writeExcel = WriteExcelTest.writeExcel.newSheet("我是年纪");
+
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+
+            Row row = sheet.createRow(1);
+            Cell cell = row.createCell(1);
+            cell.setCellValue("我是第二个Sheet");
+
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cell.setCellStyle(putCellStyle.apply(cellStyle));
+
+        });
+
+        writeExcel.flushData();
+
+
     }
 
 
+
+    @AfterAll
+    public static void after() throws IOException {
+        writeExcel.write(targetFile);
+    }
 
 }

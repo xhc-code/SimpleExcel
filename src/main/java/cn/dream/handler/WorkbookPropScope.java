@@ -1,7 +1,6 @@
 package cn.dream.handler;
 
-import lombok.Getter;
-import lombok.Setter;
+import cn.dream.util.anno.Feature.RequireCopy;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Workbook;
 
@@ -19,12 +18,10 @@ public abstract class WorkbookPropScope {
     /**
      * 单元格样式缓存Map,避免创建过多的样式对象
      */
-    @Setter
-    @Getter
+    @RequireCopy
     protected Map<Integer, CellStyle> cacheCellStyleMap;
 
-    @Setter
-    @Getter
+    @RequireCopy
     protected Workbook workbook;
 
 }

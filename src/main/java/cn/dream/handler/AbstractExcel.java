@@ -220,7 +220,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         cacheMergeFieldListMap = new HashMap<>();
         cacheMergeFieldGroupKeyMap = new HashMap<>();
 
-        if(this.workbook != null){
+        if(getWorkbook() != null){
             // 初始化操作
             globalCellStyle = workbook.createCellStyle();
         } else {
@@ -230,11 +230,17 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         }
     }
 
+    /**
+     * 初始化后续的消费者列表
+     */
     public void initConsumerData(){
         taskConsumer.forEach(c -> c.accept(this));
         taskConsumer.clear();
     }
 
+    /**
+     * 仅在第一次实例化对象的时候调用,xxx.newInstance
+     */
     public void oneInit(){
         cacheCellStyleMap = Collections.synchronizedMap(new HashMap<>());
     }
@@ -245,6 +251,17 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @return
      */
     public abstract T newSheet(String sheetName);
+
+    protected Workbook getWorkbook(){
+        // 此错误一般不会触发
+        Validate.notNull(this.workbook,"当前未设置工作簿对象，请设置Workbook对象");
+        return this.workbook;
+    }
+
+    protected Sheet getSheet(){
+        Validate.notNull(this.sheet,"当前未设置Sheet对象,请通过相关API进行设置");
+        return this.sheet;
+    }
 
     protected String validatePassReturnSafeSheetName(String sheetName){
         WorkbookUtil.validateSheetName(sheetName);
@@ -284,8 +301,8 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     public void createSheet(String sheetName){
-        Validate.isTrue(this.sheet == null , "当前Sheet已存在对象,如需创建Sheet,请使用 #newSheet(String) 进行操作");
-        this.sheet = this.createSheetIfNotExists(this.workbook,sheetName);
+        Validate.isTrue(getSheet() == null , "当前Sheet已存在对象,如需创建Sheet,请使用 #newSheet(String) 进行操作");
+        this.sheet = this.createSheetIfNotExists(getWorkbook(),sheetName);
     }
 
     protected List<Field> getFields() {
@@ -630,7 +647,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected CellStyle createCellStyleIfNotExists(CellStyle cellStyle){
-        CellStyle cellStyleIfNotExists = createCellStyleIfNotExists(this.workbook, cellStyle);
+        CellStyle cellStyleIfNotExists = createCellStyleIfNotExists(getWorkbook(), cellStyle);
         return cellStyleIfNotExists;
     }
 
@@ -684,7 +701,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
         Object cellValue;
         if(cellRangeAddress != null){
-            Cell firstCell = getFirstCell(this.sheet, cellRangeAddress);
+            Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
             cellValue = getCellValue(firstCell);
         }else {
             cellValue = getCellValue(cell);
@@ -778,7 +795,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @throws IOException
      */
     public void write(File outputFile) throws IOException {
-        write(this.workbook,this.sheet,outputFile);
+        write(getWorkbook(),getSheet(),outputFile);
     }
 
 

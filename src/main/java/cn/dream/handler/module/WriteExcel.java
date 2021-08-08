@@ -3,12 +3,11 @@ package cn.dream.handler.module;
 import cn.dream.anno.Excel;
 import cn.dream.enu.HandlerTypeEnum;
 import cn.dream.handler.AbstractExcel;
-import cn.dream.handler.WorkbookPropScope;
 import cn.dream.handler.bo.SheetData;
+import cn.dream.util.ReflectionUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.springframework.beans.BeanUtils;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -21,7 +20,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * 将根据 @ExcelField 注解的 title 生成Header值，简便使用的方式
      */
     public void generateHeader() {
-        Validate.notNull(this.sheet);
+        Validate.notNull(getSheet());
 
         SheetData sheetData = getSheetData();
         Excel excelAnno = sheetData.getClsExcel();
@@ -30,12 +29,12 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
 
         // 将首行取出，与目标Sheet的首行对比，
         int i = excelAnno.rowIndex();
-        int lastRowNum = this.sheet.getLastRowNum();
-        Row row = createRowIfNotExists(this.sheet,getMaxNum(i, lastRowNum, 0));
+        int lastRowNum = getSheet().getLastRowNum();
+        Row row = createRowIfNotExists(getSheet(),getMaxNum(i, lastRowNum, 0));
         AtomicInteger columnIndexAtomic = new AtomicInteger(getMaxNum(excelAnno.columnIndex(), row.getFirstCellNum(), 0));
         for (Field field : fields) {
 
-            processAndNoticeCls(this.workbook,null,field,
+            processAndNoticeCls(getWorkbook(),null,field,
                     () -> createCellIfNotExists(row, columnIndexAtomic.getAndIncrement()),
                     HandlerTypeEnum.HEADER);
 
@@ -52,11 +51,11 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * 生成主体Body
      */
     public void generateBody() {
-        Validate.notNull(this.sheet);
+        Validate.notNull(getSheet());
 
         final SheetData sheetData = getSheetData();
 
-        int targetLastRowIndex = this.sheet.getLastRowNum() + 1;
+        int targetLastRowIndex = getSheet().getLastRowNum() + 1;
 
         List<Field> fieldList = sheetData.getFieldList();
         Collection<?> dataColl = sheetData.getDataList();
@@ -67,8 +66,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
             columnIndex.set(0);
 
             for (Field field : fieldList) {
-                processAndNoticeCls(this.workbook,v,field,() -> {
-                    Row targetSheetRowIfNotExists = createRowIfNotExists(this.sheet,rowIndex.get());
+                processAndNoticeCls(getWorkbook(),v,field,() -> {
+                    Row targetSheetRowIfNotExists = createRowIfNotExists(getSheet(),rowIndex.get());
                     return createCellIfNotExists(targetSheetRowIfNotExists, columnIndex.getAndIncrement());
                 }, HandlerTypeEnum.BODY);
             }
@@ -83,7 +82,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * @param iCustomizeCell
      */
     public void handlerCustomizeCellItem(ICustomizeCell iCustomizeCell) {
-        iCustomizeCell.customize(this.workbook,this.sheet, cellStyle -> this.createCellStyleIfNotExists(this.workbook,cellStyle));
+        Validate.notNull(getSheet(),"请设置Sheet对象");
+        iCustomizeCell.customize(getWorkbook(),getSheet(), cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle));
     }
 
     private WriteExcel(){}
@@ -99,13 +99,13 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      */
     @Override
     public void flushData() {
-        writeData(this.sheet);
+        writeData(getSheet());
     }
 
     @Override
     public WriteExcel newSheet(String sheetName) {
         WriteExcel writeExcel = new WriteExcel();
-        BeanUtils.copyProperties(this,writeExcel, WorkbookPropScope.class);
+        ReflectionUtils.copyPropertiesByAnno(this,writeExcel);
         writeExcel.initConsumerData();
         writeExcel.createSheet(sheetName);
         writeExcel.embeddedObject = true;
@@ -124,7 +124,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * @return
      */
     public CopyExcel newCopyExcel(Workbook fromWorkbook){
-        CopyExcel copyExcel = CopyExcel.newInstance(fromWorkbook, this.workbook);
+        CopyExcel copyExcel = CopyExcel.newInstance(fromWorkbook, getWorkbook());
         setTransferBeTure(copyExcel);
         return copyExcel;
     }

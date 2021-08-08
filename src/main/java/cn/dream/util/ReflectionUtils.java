@@ -113,7 +113,7 @@ public class ReflectionUtils {
 			}
 			
 			tempCls = tempCls.getSuperclass();
-		}while(tempCls != null && tempCls == endCls);
+		}while(tempCls != null && tempCls != endCls);
 
 		return fieldMap.values().toArray(COVER_FIELDS);
 	}

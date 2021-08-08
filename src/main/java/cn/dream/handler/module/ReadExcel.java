@@ -2,7 +2,6 @@ package cn.dream.handler.module;
 
 import cn.dream.anno.Excel;
 import cn.dream.handler.AbstractExcel;
-import cn.dream.handler.WorkbookPropScope;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.ValueTypeUtils;
@@ -15,7 +14,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.springframework.beans.BeanUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,13 +24,13 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
 
     public void toggleSheet(int sheetAt){
-        toggleSheet(this.workbook.getSheetName(sheetAt));
+        toggleSheet(getWorkbook().getSheetName(sheetAt));
     }
 
     public void toggleSheet(String sheetName){
-        Validate.isTrue(this.sheet == null);
+        Validate.isTrue(getSheet() == null);
         String safeSheetName = validatePassReturnSafeSheetName(sheetName);
-        this.sheet = this.workbook.getSheet(safeSheetName);
+        this.sheet = getWorkbook().getSheet(safeSheetName);
     }
 
     @Override
@@ -58,16 +56,16 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
         Excel clsExcel = sheetData.getClsExcel();
 
-        int firstRowNum = this.sheet.getFirstRowNum();
-        int lastRowNum = this.sheet.getLastRowNum();
+        int firstRowNum = getSheet().getFirstRowNum();
+        int lastRowNum = getSheet().getLastRowNum();
 
         // 处理Header表头
         int[] headerRowRangeIndex = clsExcel.headerRowRangeIndex();
 
         // 如果未设置header头的范围,默认是根据有效的第一行并且是有效的第一列的单元格的范围，推算表头的范围
         if(headerRowRangeIndex.length == 0){
-            Row row = this.sheet.getRow(firstRowNum);
-            CellRangeAddress cellRangeAddress = getCellRangeAddress(this.sheet, row.getCell(row.getFirstCellNum()));
+            Row row = getSheet().getRow(firstRowNum);
+            CellRangeAddress cellRangeAddress = getCellRangeAddress(getSheet(), row.getCell(row.getFirstCellNum()));
             int firstLastRowIndex = Math.max(0, ObjectUtils.anyNotNull(cellRangeAddress) ? (cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()): 0);
 
             headerRowRangeIndex = new int[] {firstRowNum,firstRowNum + firstLastRowIndex};
@@ -76,7 +74,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         for(int rowIndex=firstRowNum;rowIndex <= lastRowNum; rowIndex++) {
             if(rowIndex >= headerRowRangeIndex[0] && rowIndex <= headerRowRangeIndex[1]){
                 // 处理Header的内容
-                putHeaderInfo(this.sheet,headerRowRangeIndex);
+                putHeaderInfo(getSheet(),headerRowRangeIndex);
                 rowIndex += (headerRowRangeIndex[1] - headerRowRangeIndex[0]);
                 continue;
             }
@@ -108,7 +106,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         Class<?> dataCls = sheetData.getDataCls();
         List<Field> fieldList = sheetData.getFieldList();
 
-        Row row = this.sheet.getRow(rowIndex);
+        Row row = getSheet().getRow(rowIndex);
 
         // 按照索引填充数据
         Object newInstance = ReflectionUtils.newInstance(dataCls,false);
@@ -118,7 +116,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
             Cell cell = row.getCell(headerInfo.getColIndex());
 
-            Object cellValue = getMergeCellValue(this.sheet,cell);
+            Object cellValue = getMergeCellValue(getSheet(),cell);
             cellValue = ValueTypeUtils.convertValueType(cellValue, field.getType());
             field.set(newInstance,cellValue);
 
@@ -156,7 +154,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
                 Object cellValue;
                 if(cellRangeAddress != null){
-                    Cell firstCell = getFirstCell(this.sheet, cellRangeAddress);
+                    Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
                     cellValue = getCellValue(firstCell);
                     rowPointer+= Math.max(0,(cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()));
 
@@ -239,7 +237,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      */
     public ReadExcel readSheet(String sheetName) {
         ReadExcel readExcel = new ReadExcel();
-        BeanUtils.copyProperties(this,readExcel, WorkbookPropScope.class);
+        ReflectionUtils.copyPropertiesByAnno(this,readExcel);
         readExcel.initConsumerData();
         readExcel.toggleSheet(sheetName);
         readExcel.embeddedObject = true;
@@ -251,7 +249,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      */
     @Override
     public void flushData() {
-        writeData(this.sheet);
+        writeData(getSheet());
     }
 
     public static ReadExcel newInstance(Workbook workbook) {
