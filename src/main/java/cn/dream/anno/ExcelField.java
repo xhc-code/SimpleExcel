@@ -61,6 +61,13 @@ public @interface ExcelField {
 	 * @return
 	 */
 	Class<? extends DefaultFormatValueAnnoHandler> formatValueCls() default DefaultFormatValueAnnoHandler.class;
+
+	/**
+	 * 只有设置Date和Calendar字段时，才会生效; 默认： yyyy-MM-dd HH:mm:ss  ==  2021-08-12 09:31:33
+	 *  为空字符串或字段类型为Date时才会调用这个属性
+	 * @return
+	 */
+	String dateFormat() default "yyyy-MM-dd HH:mm:ss";
 	
 	/**
 	 * 读取内容表达式；示例：1=男,2=女,3=未知; 导入时会将文字值转换成对应的数值，适用于枚举形式
@@ -73,7 +80,13 @@ public @interface ExcelField {
 	 * @return
 	 */
  	Class<? extends DefaultConverterValueAnnoHandler> converterValueCls() default DefaultConverterValueAnnoHandler.class;
-	
+
+	/**
+	 * 启用转换器多值处理;true代表启用,false代表不启用多值匹配
+	 * @return
+	 */
+	boolean enableConverterMultiValue() default false;
+
  	/**
  	 * 是否开启自动列宽
  	 * @return

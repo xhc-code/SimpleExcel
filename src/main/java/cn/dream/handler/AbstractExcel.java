@@ -8,6 +8,7 @@ import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
+import cn.dream.util.ValueTypeUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -52,13 +53,37 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     @FunctionalInterface
     interface ISetCellValue {
 
-        default void setValue(Cell cell, Object value) throws ParseException {
+        /**
+         * 暴露出来的执行设置Cell值方法
+         * @param cell
+         * @param value
+         * @param cellConsumer
+         * @throws ParseException
+         */
+        default void setValue(Cell cell, Object value,Consumer<Cell> cellConsumer) throws ParseException {
             if(ObjectUtils.isEmpty(value)){
                 cell.setBlank();
                 return;
             }
             Validate.notNull(value,"不允许的单元格空值");
-            _setValue(cell, value.toString());
+            String finalValue;
+
+            if(value instanceof Date){
+                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
+                finalValue = dateTimeInstance.format((Date)value);
+//                ExcelField localThreadExcelField = getLocalThreadExcelField();
+//                finalValue = DateUtils.formatDate((Date)value,localThreadExcelField.dateFormat());
+                cellConsumer.accept(cell);
+            }else if(value instanceof Calendar){
+                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
+                finalValue = dateTimeInstance.format(((Calendar) value).getTime());
+//                ExcelField localThreadExcelField = getLocalThreadExcelField();
+//                finalValue = DateUtils.formatDate(Date.from(((Calendar) value).toInstant()),localThreadExcelField.dateFormat());
+                cellConsumer.accept(cell);
+            }else {
+                finalValue = value.toString();
+            }
+            _setValue(cell, finalValue);
         }
 
         void _setValue(Cell cell, String value) throws ParseException;
@@ -94,7 +119,8 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                 cell.setCellValue(value);
             },
             (cell, value) -> {
-                cell.setCellValue(DateFormat.getDateTimeInstance().parse(value));
+                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
+                cell.setCellValue(dateTimeInstance.parse(value));
             },
             (cell, value) -> {
                 Calendar calendar = Calendar.getInstance();
@@ -107,14 +133,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * Java类型对应的映射到单元格类型的数组
      */
     private static final Short[][] JAVA_TYPE_MAPPING_CELL_TYPES = new Short[][]{
-            {0}, {2}, {2}, {2}, {2}, {2}, {2}, {1, 4}
+            {0}, {2}, {2}, {2}, {2}, {2}, {2}, {1, 4}, {2},{2}
     };
 
     private static final CellType[] EMPTY_CELL_TYPES = new CellType[0];
 
     private static final String[] TYPE_STRINGS = new String[0];
-
-    private static final Map<CellType, Class<?>> EXCEL_TYPE_MAPPING = new HashMap<>();
 
     protected static final String STRING_DELIMITER = "|_|";
 
@@ -122,6 +146,8 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
 
     /* ======          实例字段  ======================*/
+
+    private CellStyle defaultCellStyle;
 
     /**
      * 全局的单元格样式模具；WorkBook创建的CellStyle对象有限，需要节省使用
@@ -220,11 +246,13 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         cacheMergeFieldListMap = new HashMap<>();
         cacheMergeFieldGroupKeyMap = new HashMap<>();
 
-        if(getWorkbook() != null){
+        if(this.workbook != null){
             // 初始化操作
+            defaultCellStyle = workbook.createCellStyle();
             globalCellStyle = workbook.createCellStyle();
         } else {
             taskConsumer.add((abstractExcel)->{
+                abstractExcel.defaultCellStyle = workbook.createCellStyle();
                 abstractExcel.globalCellStyle = workbook.createCellStyle();
             });
         }
@@ -301,7 +329,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     public void createSheet(String sheetName){
-        Validate.isTrue(getSheet() == null , "当前Sheet已存在对象,如需创建Sheet,请使用 #newSheet(String) 进行操作");
+        Validate.isTrue(this.sheet == null , "当前Sheet已存在对象,如需创建Sheet,请使用 #newSheet(String) 进行操作");
         this.sheet = this.createSheetIfNotExists(getWorkbook(),sheetName);
     }
 
@@ -427,6 +455,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
+     * [写入Excel时会调用]
      * 后续处理的流程和通知Cls的回调
      */
     protected void processAndNoticeCls(Workbook workbook,Object o, Field field, Supplier<Cell> fromCellSupplier, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
@@ -463,9 +492,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             if(HandlerTypeEnum.BODY == handlerTypeEnum){
 
 
-                // 转换字典表达式
+                // Excel下拉框选项的处理
                 String s = fieldAnnotation.converterValueExpression();
-                if(StringUtils.isNotEmpty(s) || fieldAnnotation.converterValueCls() != DefaultConverterValueAnnoHandler.class ){
+                if(StringUtils.isNotEmpty(s) || fieldAnnotation.selectValueListCls() != DefaultSelectValueListAnnoHandler.class ){
                     RecordDataValidator recordDataValidator = recordDataValidatorMap.computeIfAbsent(field, field1 -> {
                         Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = fieldAnnotation.selectValueListCls();
                         DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
@@ -526,31 +555,35 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                 // 这里判断处理的类型是不是 BODY阶段，否则，o参数是为null，取不到值的，相应的默认值也不进行赋值；原因是 HEADER和FOOTER(未来可能存在)是针对注解本身的值进行操作的
                 if(HandlerTypeEnum.BODY == handlerTypeEnum){
                     valueAtomicReference.compareAndSet(null,field.get(o));
-                    valueAtomicReference.compareAndSet(null,fieldAnnotation.defaultValue());
+                    if(StringUtils.isNotEmpty(fieldAnnotation.defaultValue())){
+                        valueAtomicReference.compareAndSet(null,fieldAnnotation.defaultValue());
+                    }
 
                     // 当字段有值才需要进行转换
                     if(ObjectUtils.isNotEmpty(valueAtomicReference.get())){
                         // 字典转换值
                         Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
                         DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
-                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression(), false);
+                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
                         defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
-                        defaultConverterValueAnnoHandler.doConverterValue(dictDataMap,classAtomicReference,valueAtomicReference);
+                        if(!dictDataMap.isEmpty()){
+                            if(fieldAnnotation.enableConverterMultiValue()){
+                                defaultConverterValueAnnoHandler.multiMapping(dictDataMap,classAtomicReference,valueAtomicReference);
+                            }else{
+                                defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,classAtomicReference,valueAtomicReference);
+                            }
+                            classAtomicReference.set(valueAtomicReference.get().getClass());
+                        }
                     }
 
                     writeValueAnnoHandler.afterHandler(classAtomicReference, valueAtomicReference);
 
-                    // 格式化
-                    Class<? extends DefaultFormatValueAnnoHandler> formatValueCls = fieldAnnotation.formatValueCls();
-                    DefaultFormatValueAnnoHandler defaultFormatValueAnnoHandler = ReflectionUtils.newInstance(formatValueCls);
-
-                    // 格式化后的值
-                    valueAtomicReference.set(defaultFormatValueAnnoHandler.formatValue(valueAtomicReference.get(), classAtomicReference.get()));
                 }else if(HandlerTypeEnum.HEADER == handlerTypeEnum){
                     classAtomicReference.set(String.class);
                     valueAtomicReference.set(fieldAnnotation.name());
                 }
 
+                currentHandlerFieldAnno = fieldAnnotation;
                 setCellValue(cell, classAtomicReference.get(), valueAtomicReference.get());
             } catch (IllegalAccessException e) {
                 onIllegalAccessException(e);
@@ -559,12 +592,21 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     }
 
+    /**
+     * [仅限WriteExcel有效]
+     * 当前正在处理的currentField对应的ExcelField注解对象
+     */
+    protected ExcelField currentHandlerFieldAnno=null;
+
     protected void onIllegalAccessException(IllegalAccessException illegalAccessException) {
         illegalAccessException.printStackTrace();
     }
 
-
     protected CellStyle getGlobalCellStyle() {
+        return getGlobalCellStyle(null);
+    }
+    protected CellStyle getGlobalCellStyle(CellStyle cellStyle) {
+        globalCellStyle.cloneStyleFrom(cellStyle == null ? defaultCellStyle : cellStyle);
         return globalCellStyle;
     }
 
@@ -588,15 +630,18 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 设置合并单元格的值
-     * @param sheet
-     * @param cellAddresses
-     * @param valueType
-     * @param value
+     * 将当前处理的字段放到线程本地环境中
+     *   注意：使用 {@code setLocalThreadExcelField } 之后一定要调用 {@code clearLocalThreadExcelField} 进行清除
      */
-    protected void setCellValue(Sheet sheet,CellRangeAddress cellAddresses, Class<?> valueType, Object value) {
-        Cell mergeRangeFirstCell = getMergeRangeFirstCell(sheet,cellAddresses);
-        setCellValue(mergeRangeFirstCell, valueType, value);
+    private static final ThreadLocal<ExcelField> EXCEL_FIELD_THREAD_LOCAL = new ThreadLocal<>();
+    public static void setLocalThreadExcelField(ExcelField excelField){
+        EXCEL_FIELD_THREAD_LOCAL.set(excelField);
+    }
+    public static ExcelField getLocalThreadExcelField(){
+        return EXCEL_FIELD_THREAD_LOCAL.get();
+    }
+    public static void clearLocalThreadExcelField(){
+        EXCEL_FIELD_THREAD_LOCAL.remove();
     }
 
     /**
@@ -608,14 +653,39 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected void setCellValue(Cell cell, Class<?> valueType, Object value) {
         int javaTypeIndex = javaTypeIndex(valueType);
-
         try {
             ISetCellValue iSetCellValue = JAVA_TYPE_SET_CELL_VALUE[javaTypeIndex];
-            iSetCellValue.setValue(cell, value);
+            Object convertValue = value;
+            if(ObjectUtils.isNotEmpty(value)){
+                try {
+                    setLocalThreadExcelField(currentHandlerFieldAnno);
+                    convertValue = ValueTypeUtils.convertValueType(value, valueType);
+                }finally {
+                    clearLocalThreadExcelField();
+                }
+            }
+            try {
+                setLocalThreadExcelField(currentHandlerFieldAnno);
+                iSetCellValue.setValue(cell, convertValue,(c -> {
+
+                    /**
+                     * currentHandlerFieldAnno 此实例字段只有在写入Excel时，才会有值
+                     */
+                    if(currentHandlerFieldAnno != null){
+                        CellStyle cellStyle = getGlobalCellStyle(c.getCellStyle());
+                        CreationHelper creationHelper = getWorkbook().getCreationHelper();
+                        cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat(currentHandlerFieldAnno.dateFormat()));
+                        c.setCellStyle(createCellStyleIfNotExists(cellStyle));
+                    }
+
+                }));
+            }finally {
+                clearLocalThreadExcelField();
+            }
+
         } catch (ParseException e) {
             e.printStackTrace();
         }
-
     }
 
     protected Row createRowIfNotExists(Sheet sheet, int rowIndex) {
@@ -647,8 +717,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected CellStyle createCellStyleIfNotExists(CellStyle cellStyle){
-        CellStyle cellStyleIfNotExists = createCellStyleIfNotExists(getWorkbook(), cellStyle);
-        return cellStyleIfNotExists;
+        return createCellStyleIfNotExists(getWorkbook(), cellStyle);
     }
 
     /**

@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.util.Date;
+
 @Getter
 @Setter
 @ToString
@@ -24,5 +26,15 @@ public class StudentTestEntity {
     @RequireCopy
     @ExcelField(name = "学生年龄",autoSizeColumn = true)
     private Integer age;
+
+    @ExcelField(name = "是否开放",converterValueExpression = "1=是,0=否",selectValues = "是,否")
+    private Integer isPublic;
+
+
+    @ExcelField(name = "生日",dateFormat = "yyyy/MM-dd HH:mm-ss")
+    private Date birthday;
+
+    @ExcelField(name = "成功了吗?")
+    private Boolean success;
 
 }

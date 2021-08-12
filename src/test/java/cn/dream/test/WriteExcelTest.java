@@ -13,6 +13,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @SpringBootTest
@@ -45,26 +46,41 @@ public class WriteExcelTest {
 
     static WriteExcel writeExcel = null;
 
+    /**
+     * 初始化数据
+     */
     public static void initData(){
         StudentTestEntity studentTestEntity = new StudentTestEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setName("恶魔001");
         studentTestEntity.setAge(21);
+        studentTestEntity.setIsPublic(1);
+        studentTestEntity.setSuccess(true);
         studentTestEntityList.add(studentTestEntity);
 
         studentTestEntity = new StudentTestEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setName("恶魔002");
         studentTestEntity.setAge(23);
+        studentTestEntity.setIsPublic(1);
+        studentTestEntity.setSuccess(true);
+        studentTestEntity.setBirthday(new Date());
         studentTestEntityList.add(studentTestEntity);
 
         studentTestEntity = new StudentTestEntity();
         studentTestEntity.setUid("002");
         studentTestEntity.setName("恶魔005");
         studentTestEntity.setAge(29);
+        studentTestEntity.setIsPublic(0);
+        studentTestEntity.setBirthday(new Date());
         studentTestEntityList.add(studentTestEntity);
     }
 
+    /**
+     * 测试写入Excel基本数据
+     * @throws IOException
+     * @throws InvalidFormatException
+     */
     @Test
     public void test1() throws IOException, InvalidFormatException {
 
@@ -78,6 +94,9 @@ public class WriteExcelTest {
 
     }
 
+    /**
+     * 测试创建Sheet是否有问题
+     */
     @Test
     public void test2(){
         WriteExcel writeExcel = WriteExcelTest.writeExcel.newSheet("我是年纪");
@@ -95,13 +114,29 @@ public class WriteExcelTest {
 
         });
 
+        /**
+         * 此方法适用于打开多Sheet操作的情况，这个方法主要用于写入一些临时存起来的数据
+         */
         writeExcel.flushData();
 
 
     }
 
+    /**
+     * 测试根据多列进行合并单元格(跨行合并,列还是一列)
+     */
+    public void test3(){
 
 
+
+
+    }
+
+
+    /**
+     * 最终写入到指定文件
+     * @throws IOException
+     */
     @AfterAll
     public static void after() throws IOException {
         writeExcel.write(targetFile);

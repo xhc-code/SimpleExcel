@@ -2,6 +2,7 @@ package cn.dream.handler.module;
 
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
+import cn.dream.anno.handler.excelfield.DefaultConverterValueAnnoHandler;
 import cn.dream.handler.AbstractExcel;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
@@ -21,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class ReadExcel extends AbstractExcel<ReadExcel> {
@@ -31,7 +33,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
     }
 
     public void toggleSheet(String sheetName){
-        Validate.isTrue(getSheet() == null);
+        Validate.isTrue(this.sheet == null);
         String safeSheetName = validatePassReturnSafeSheetName(sheetName);
         this.sheet = getWorkbook().getSheet(safeSheetName);
     }
@@ -136,19 +138,21 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         Object newInstance = ReflectionUtils.newInstance(dataCls,false);
 
         Field field;
+        ExcelField fieldAnnotation;
         for (int i = 0; i < headerInfoList.size(); i++) {
             HeaderInfo headerInfo = headerInfoList.get(i);
             if(byHeaderName){
                 String headerNameAsString = headerInfo.getHeaderNameAsString();
                 field = fieldMap.get(headerNameAsString);
+                fieldAnnotation = field.getAnnotation(ExcelField.class);
                 Validate.notNull(field, "没有找到名称为 %s 的字段对象",headerNameAsString);
             }else{
                 field = fieldList.get(i);
-                ExcelField annotation = field.getAnnotation(ExcelField.class);
-                if(annotation != null && annotation.validateHeader()){
-                    String headerName = annotation.validateHeaderName();
+                fieldAnnotation = field.getAnnotation(ExcelField.class);
+                if(fieldAnnotation != null && fieldAnnotation.validateHeader()){
+                    String headerName = fieldAnnotation.validateHeaderName();
                     if(StringUtils.isEmpty(headerName)){
-                        headerName = annotation.name();
+                        headerName = fieldAnnotation.name();
                     }
                     Validate.isTrue(headerName.equals(headerInfo.getHeaderNameAsString()),"Header表头不一致(AnnoHeader - ExcelHeader)：%s - %s",headerName,headerInfo.getHeaderNameAsString());
                 }
@@ -156,9 +160,47 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
             Cell cell = row.getCell(headerInfo.getColIndex());
 
+            Class<?> fieldType = field.getType();
             Object cellValue = getMergeCellValue(getSheet(),cell);
-            cellValue = ValueTypeUtils.convertValueType(cellValue, field.getType());
+
+            if(ObjectUtils.isEmpty(cellValue)){
+                cellValue = null;
+            }
+
+            // 当字段有值才需要进行转换
+            if(ObjectUtils.isNotEmpty(cellValue)){
+                // 字典转换值
+                Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
+                Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
+                if(!dictDataMap.isEmpty()){
+                    // 反转Map，用于从 Excel读取值并转换值
+                    dictDataMap = defaultConverterValueAnnoHandler.reverse(dictDataMap);
+                    AtomicReference<Object> valueAtomicReference=new AtomicReference<>(cellValue);
+                    if(fieldAnnotation.enableConverterMultiValue()){
+                        defaultConverterValueAnnoHandler.multiMapping(dictDataMap,new AtomicReference<>(fieldType),valueAtomicReference);
+                    }else{
+                        defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,new AtomicReference<>(fieldType),valueAtomicReference);
+                    }
+                    cellValue = valueAtomicReference.get();
+                }
+            }
+
+            if(ObjectUtils.isNotEmpty(cellValue)){
+                try {
+                    setLocalThreadExcelField(fieldAnnotation);
+                    cellValue = ValueTypeUtils.convertValueType(cellValue, fieldType);
+                }finally {
+                    clearLocalThreadExcelField();
+                }
+            }
+
             field.set(newInstance,cellValue);
+
+            /**
+             * 写入和读取都需要设置数据的格式，看看 defaultFormatter怎么样集成最为合适吧
+             */
 
         }
         sheetData.getDataList().add(newInstance);

@@ -1,17 +1,11 @@
 package cn.dream.util;
 
-import org.apache.commons.lang3.Validate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.function.Function;
 
 /**
  * 值类型转换工具
@@ -40,7 +34,7 @@ public class ValueTypeUtils {
         if(conversionService.canConvert(value.getClass(),targetType)){
             return conversionService.convert(value,targetType);
         }
-        throw new RuntimeException("不支持的类型转换");
+        throw new RuntimeException(String.format("不支持的类型转换: %s -> %s",value.getClass(),targetType));
     }
 
 }
