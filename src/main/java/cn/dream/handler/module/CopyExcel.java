@@ -250,7 +250,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
     }
 
     /**
-     * 位置点处理数据，在写入Workbook之前
+     * 位置点处理数据，在写入Workbook之前，可将要写入的值在这个对象里设置，仅在Copy单元格的时候会调用
      */
     @Setter
     @RequireCopy
