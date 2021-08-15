@@ -1,6 +1,7 @@
 package cn.dream.anno;
 
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
+import cn.dream.anno.handler.DefaultRowCellStyleAnnoHandler;
 
 import java.lang.annotation.*;
 
@@ -24,6 +25,12 @@ public @interface Excel {
 	 * @return
 	 */
 	Class<? extends DefaultExcelNameAnnoHandler> handlerName() default DefaultExcelNameAnnoHandler.class;
+
+	/**
+	 * 处理设置行样式
+	 * @return
+	 */
+	Class<? extends DefaultRowCellStyleAnnoHandler> handleRowStyle() default DefaultRowCellStyleAnnoHandler.class;
 
 	/**
 	 * <span style='color:red'>仅导出时生效</span><br />

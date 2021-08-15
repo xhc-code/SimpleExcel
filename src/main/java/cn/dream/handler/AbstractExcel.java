@@ -478,9 +478,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /**
      * [写入Excel时会调用]
-     * 后续处理的流程和通知Cls的回调
+     * 处理单元格的写入数据和调用针对单元格的一些额外的操作
      */
-    protected void processAndNoticeCls(Workbook workbook,Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
+    protected void writeCellAndNoticeCls(Workbook workbook, Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
 
         Validate.notNull(handlerTypeEnum);
         Validate.notNull(field);
@@ -511,7 +511,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             // 这里记录下来位置，然后放到write的时候进行设置
             // 设置此Cell可选择的值列表
             if(HandlerTypeEnum.BODY == handlerTypeEnum){
-
 
                 // Excel下拉框选项的处理
                 String s = fieldAnnotation.converterValueExpression();

@@ -6,6 +6,7 @@ import cn.dream.handler.AbstractExcel;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 
@@ -13,6 +14,7 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class WriteExcel extends AbstractExcel<WriteExcel> {
 
@@ -34,7 +36,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         AtomicInteger columnIndexAtomic = new AtomicInteger(getMaxNum(excelAnno.columnIndex(), row.getFirstCellNum(), 0));
         for (Field field : fields) {
 
-            processAndNoticeCls(getWorkbook(),null,field,
+            writeCellAndNoticeCls(getWorkbook(),null,field,
                     () -> createCellIfNotExists(row, columnIndexAtomic.getAndIncrement()),
                     HandlerTypeEnum.HEADER);
 
@@ -55,6 +57,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
 
         final SheetData sheetData = getSheetData();
 
+        Excel excelAnno = sheetData.getExcelAnno();
+
         int targetLastRowIndex = getSheet().getLastRowNum() + 1;
 
         List<Field> fieldList = sheetData.getFieldList();
@@ -65,12 +69,25 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         dataColl.forEach(v -> {
             columnIndex.set(0);
 
+            /**
+             * 处理单元格的一些操作
+             */
+            AtomicReference<Row> targetSheetRowIfNotExists = new AtomicReference<>(null);
             for (Field field : fieldList) {
-                processAndNoticeCls(getWorkbook(),v,field,() -> {
-                    Row targetSheetRowIfNotExists = createRowIfNotExists(getSheet(),rowIndex.get());
-                    return createCellIfNotExists(targetSheetRowIfNotExists, columnIndex.getAndIncrement());
+                writeCellAndNoticeCls(getWorkbook(),v,field,() -> {
+                    targetSheetRowIfNotExists.set(createRowIfNotExists(getSheet(), rowIndex.get()));
+                    return createCellIfNotExists(targetSheetRowIfNotExists.get(), columnIndex.getAndIncrement());
                 }, HandlerTypeEnum.BODY);
             }
+            Row row = targetSheetRowIfNotExists.get();
+
+            /**
+             * 设置行样式单元格信息
+             */
+            CellStyle globalCellStyle = getGlobalCellStyle(row.getRowStyle());
+            ReflectionUtils.newInstance(excelAnno.handleRowStyle()).setRowStyle(globalCellStyle,v,rowIndex.get());
+            globalCellStyle = createCellStyleIfNotExists(globalCellStyle);
+            row.setRowStyle(globalCellStyle);
 
             rowIndex.getAndIncrement();
         });
