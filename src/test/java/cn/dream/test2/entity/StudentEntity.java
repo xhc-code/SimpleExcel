@@ -3,10 +3,7 @@ package cn.dream.test2.entity;
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
 import cn.dream.anno.MergeField;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.Date;
 
@@ -14,6 +11,8 @@ import java.util.Date;
 @Setter
 @ToString
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Excel(name = "学生文件")
 public class StudentEntity {
 
@@ -26,7 +25,7 @@ public class StudentEntity {
     /**
      * 年份
      */
-    @ExcelField(name = "年龄")
+    @ExcelField(name = "年龄",cellStyleCls = AgeExcelFieldStyleAnnoHandler.class)
     private Integer age;
 
     /**

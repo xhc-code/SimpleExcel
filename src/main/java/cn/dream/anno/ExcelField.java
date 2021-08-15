@@ -51,12 +51,6 @@ public @interface ExcelField {
 	Class<? extends DefaultExcelFieldStyleAnnoHandler> cellStyleCls() default DefaultExcelFieldStyleAnnoHandler.class;
 	
 	/**
-	 * 格式化值的对象
-	 * @return
-	 */
-	Class<? extends DefaultFormatValueAnnoHandler> formatValueCls() default DefaultFormatValueAnnoHandler.class;
-
-	/**
 	 * 只有设置Date和Calendar字段时，才会生效; 默认： yyyy-MM-dd HH:mm:ss  ==  2021-08-12 09:31:33
 	 *  为空字符串或字段类型为Date时才会调用这个属性
 	 * @return
@@ -99,7 +93,7 @@ public @interface ExcelField {
 	 */
  	boolean apply() default true;
 
-	/**
+	/**【写入Excel有作用，预留功能】
 	 * 修改值和类型的一个阶段；处于 值获取后，但处于写入Excel字段值之前，此before处理完之后，将其中的值和类型作为最终结果写入到Excel中
 	 * @return
 	 */

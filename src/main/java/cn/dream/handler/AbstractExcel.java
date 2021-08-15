@@ -475,16 +475,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
 
-    protected void processAndNoticeCls(Workbook workbook,Object o, Field field,Supplier<Cell> toCellSupplier,HandlerTypeEnum handlerTypeEnum) {
-        processAndNoticeCls(workbook,o,field,() -> null,toCellSupplier, handlerTypeEnum);
-    }
-
 
     /**
      * [写入Excel时会调用]
      * 后续处理的流程和通知Cls的回调
      */
-    protected void processAndNoticeCls(Workbook workbook,Object o, Field field, Supplier<Cell> fromCellSupplier, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
+    protected void processAndNoticeCls(Workbook workbook,Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
 
         Validate.notNull(handlerTypeEnum);
         Validate.notNull(field);
@@ -566,17 +562,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
             }
 
-            // 设置样式单元格
-            DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.cellStyleCls());
-            CellStyle globalCellStyle = getGlobalCellStyle();
-            Optional<Cell> cellOptional = Optional.ofNullable(fromCellSupplier.get());
-            defaultExcelFieldStyleAnnoHandler.cellStyle(cellOptional.map(Cell::getCellStyle).orElse(null),globalCellStyle,handlerTypeEnum);
-            globalCellStyle = createCellStyleIfNotExists(workbook,globalCellStyle);
-            cell.setCellStyle(globalCellStyle);
-
-            Class<? extends DefaultWriteValueAnnoHandler> handlerWriteValue = fieldAnnotation.handlerWriteValue();
-            DefaultWriteValueAnnoHandler writeValueAnnoHandler = ReflectionUtils.newInstance(handlerWriteValue);
-
             try {
                 field.setAccessible(true);
                 AtomicReference<Class<?>> classAtomicReference = new AtomicReference<>(field.getType());
@@ -605,12 +590,22 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                         }
                     }
 
+
+                    Class<? extends DefaultWriteValueAnnoHandler> handlerWriteValue = fieldAnnotation.handlerWriteValue();
+                    DefaultWriteValueAnnoHandler writeValueAnnoHandler = ReflectionUtils.newInstance(handlerWriteValue);
                     writeValueAnnoHandler.afterHandler(classAtomicReference, valueAtomicReference);
 
                 }else if(HandlerTypeEnum.HEADER == handlerTypeEnum){
                     classAtomicReference.set(String.class);
                     valueAtomicReference.set(fieldAnnotation.name());
                 }
+
+                // 设置样式单元格
+                DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.cellStyleCls());
+                CellStyle globalCellStyle = getGlobalCellStyle();
+                defaultExcelFieldStyleAnnoHandler.cellStyle(globalCellStyle,valueAtomicReference.get(),handlerTypeEnum);
+                globalCellStyle = createCellStyleIfNotExists(workbook,globalCellStyle);
+                cell.setCellStyle(globalCellStyle);
 
                 currentHandlerFieldAnno = fieldAnnotation;
                 setCellValue(cell, classAtomicReference.get(), valueAtomicReference.get());

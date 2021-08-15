@@ -1,6 +1,7 @@
 package cn.dream.test;
 
 import cn.dream.handler.module.ReadExcel;
+import cn.dream.test2.entity.StudentEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,7 +41,7 @@ public class ReadExcelTest {
 
     @Test
     public void test1() throws IOException, IllegalAccessException {
-        readExcel.setSheetDataCls(StudentTestEntity.class);
+        readExcel.setSheetDataCls(StudentEntity.class);
         readExcel.toggleSheet(0);
         readExcel.readData();
         readExcel.getResult().forEach(System.out::println);
