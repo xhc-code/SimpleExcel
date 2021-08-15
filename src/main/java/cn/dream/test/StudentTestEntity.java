@@ -37,4 +37,8 @@ public class StudentTestEntity {
     @ExcelField(name = "成功了吗?")
     private Boolean success;
 
+
+    @ExcelField(name = "成功了吗?")
+    private boolean success1;
+
 }

@@ -30,6 +30,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ *
+ * @param <T> 创建实例返回的对象的值
+ */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
@@ -234,10 +238,14 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected Map<Field,String> cacheMergeFieldGroupKeyMap = null;
 
+
+    protected Map<String, Integer> pointerLocationMergeCellMap = null;
+
     /**
      * 保存未执行完成的任务
      */
     protected List<Consumer<AbstractExcel<?>>> taskConsumer = new ArrayList<>();
+
 
     protected AbstractExcel(){
         recordDataValidatorMap = new HashMap<>();
@@ -245,6 +253,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         recordCellAddressRangeMap = new LinkedHashMap<>();
         cacheMergeFieldListMap = new HashMap<>();
         cacheMergeFieldGroupKeyMap = new HashMap<>();
+        pointerLocationMergeCellMap = new HashMap<>();
 
         if(this.workbook != null){
             // 初始化操作
@@ -315,12 +324,26 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param dataCls
      * @param dataColl
      */
-    protected <T> void setSheetData(Class<T> dataCls, List<T> dataColl){
+    protected <Entity> void setSheetData(Class<Entity> dataCls, List<Entity> dataColl){
         Field[] notStaticAndFinalFields = ReflectionUtils.getNotStaticAndFinalFields(dataCls);
         Field[] fields = Arrays.stream(notStaticAndFinalFields).filter(field -> field.isAnnotationPresent(ExcelField.class)).peek(org.springframework.util.ReflectionUtils::makeAccessible).collect(Collectors.toList()).toArray(notStaticAndFinalFields);
 
         List<Field> unmodifiableList = Collections.unmodifiableList(new ArrayList<>(Arrays.asList(fields)));
-        this.sheetData = new SheetData<T>(dataCls, unmodifiableList, dataColl);
+        this.sheetData = new SheetData<Entity>(dataCls, unmodifiableList, dataColl);
+    }
+
+    /**
+     * 忽略的字段列表
+     */
+    private List<String> ignoreFieldApplyList = new ArrayList<>();
+
+    /**
+     * 设置忽略的应用字段列表
+     * @param ignoreFieldGetterMethod
+     * @param <GetterMethod>
+     */
+    public <GetterMethod> void setIgnoreFieldApplyList(FieldNameFunction<GetterMethod> ignoreFieldGetterMethod){
+        ignoreFieldGetterMethod.getFieldSupplierList().forEach(sSupplier -> ignoreFieldApplyList.add(sSupplier.toPropertyName()));
     }
 
     public SheetData getSheetData(){
@@ -431,6 +454,8 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                         List<Field> fieldList = getFields();
                         return fieldList.stream().filter(f -> fieldSet.contains(f.getName())).collect(Collectors.toList());
                     });
+                }else{
+                    groupKeyFieldList = cacheMergeFieldListMap.get(field);
                 }
 
                 String groupKey = groupKeyFieldList.stream().map(f -> {
@@ -454,6 +479,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         processAndNoticeCls(workbook,o,field,() -> null,toCellSupplier, handlerTypeEnum);
     }
 
+
     /**
      * [写入Excel时会调用]
      * 后续处理的流程和通知Cls的回调
@@ -473,8 +499,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
 
         // 校验是否包含此字段
-        DefaultApplyAnnoHandler defaultApplyAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.applyCls());
-        if (fieldAnnotation.apply() && defaultApplyAnnoHandler.apply(fieldAnnotation, DefaultApplyAnnoHandler.Type.EXPORT)) {
+        if (fieldAnnotation.apply() && !ignoreFieldApplyList.contains(field.getName())) {
 
             Cell cell = toCellSupplier.get();
 
@@ -524,11 +549,15 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                 if(fieldAnnotation.mergeCell()){
                     // 记录合并单元格的范围列表
                     String groupName = getMergeCellGroupName(o, field);
-                    if(StringUtils.isNotEmpty(groupName)){
-                        CellAddressRange cellAddressRange = recordCellAddressRangeMap.get(groupName);
+                    Integer fieldIndex = pointerLocationMergeCellMap.getOrDefault(field.getName(),0);
+                    String joinGroupName = groupName + STRING_DELIMITER + fieldIndex;
+
+                    if(StringUtils.isNotEmpty(joinGroupName)){
+                        CellAddressRange cellAddressRange = recordCellAddressRangeMap.get(joinGroupName);
                         if(cellAddressRange == null){
+                            pointerLocationMergeCellMap.put(field.getName(),++fieldIndex);
                             cellAddressRange = CellAddressRange.builder().firstCol(cell.getColumnIndex()).firstRow(cell.getRowIndex()).lastCol(cell.getColumnIndex()).build();
-                            recordCellAddressRangeMap.put(groupName, cellAddressRange);
+                            recordCellAddressRangeMap.put(groupName + STRING_DELIMITER + fieldIndex, cellAddressRange);
                         }
                         cellAddressRange.setLastRow(cell.getRowIndex());
                     }

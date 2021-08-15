@@ -21,12 +21,6 @@ public @interface ExcelField {
 	String name();
 
 	/**
-	 * 字段的值类型,以注解的type值优先，没有设置则为属性的类型
-	 * @return
-	 */
-	Class<?> type() default Class.class;
-
-	/**
 	 * 验证的HeaderName名称,如果validateHeader为true,并且 validateHeaderName非空，从此名称进行获取并验证HeaderName,否则 值来源与name
 	 * @return
 	 */
@@ -105,12 +99,6 @@ public @interface ExcelField {
 	 */
  	boolean apply() default true;
 
- 	/**
- 	 * 使用进行映射时，是否包含此字段的条件，默认是 true
- 	 * @return
- 	 */
- 	Class<? extends DefaultApplyAnnoHandler> applyCls() default DefaultApplyAnnoHandler.class;
-
 	/**
 	 * 修改值和类型的一个阶段；处于 值获取后，但处于写入Excel字段值之前，此before处理完之后，将其中的值和类型作为最终结果写入到Excel中
 	 * @return
@@ -124,7 +112,7 @@ public @interface ExcelField {
 	boolean mergeCell() default false;
 
 	/**
-	 * 当 mergeRow = true时，此属性指 合并的组键使用多个值进行唯一性，这里的数组指示了组Key的组成部分
+	 * 当 mergeRow = true时，此属性指 合并的组键使用多个值进行唯一性，这里的数组指示了组Key的组成部分;默认不包含当前字段的值
 	 * @return
 	 */
 	MergeField[] mergeFields() default {};
