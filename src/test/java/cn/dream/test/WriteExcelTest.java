@@ -1,5 +1,6 @@
 package cn.dream.test;
 
+import cn.dream.handler.module.CopyExcel;
 import cn.dream.handler.module.WriteExcel;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
@@ -123,12 +124,18 @@ public class WriteExcelTest {
     }
 
     /**
-     * 测试根据多列进行合并单元格(跨行合并,列还是一列)
+     * 测试Copy行
      */
-    public void test3(){
+    @Test
+    public void test3() throws IOException {
 
+        File file = new File(classPathResource.getFile(), "CopyExcel模板.xlsx");
+        CopyExcel copyExcel = writeExcel.newCopyExcel(WorkbookFactory.create(file));
+        copyExcel.toggleFromSheet(0);
+        copyExcel.createSheet("我是COpySheet");
+        copyExcel.copyRow(2,1,5,3);
 
-
+        copyExcel.flushData();
 
     }
 

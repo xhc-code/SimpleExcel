@@ -94,7 +94,7 @@ public class FieldNameFunction<T> implements Serializable {
 
         FieldNameFunction<StudentTestEntity> studentTestEntityFieldNameFunction = new FieldNameFunction<>();
 
-        studentTestEntityFieldNameFunction.addFieldGetMethod(StudentTestEntity::getName).addFieldGetMethod(StudentTestEntity::isSuccess1);
+        studentTestEntityFieldNameFunction.addFieldGetMethod(StudentTestEntity::getName).addFieldGetMethod(StudentTestEntity::getSuccess1);
         studentTestEntityFieldNameFunction.addFieldGetMethod(StudentTestEntity::getIsPublic);
 
 

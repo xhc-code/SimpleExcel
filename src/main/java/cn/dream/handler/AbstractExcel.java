@@ -190,6 +190,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected static int javaTypeIndex(Class<?> javaType) {
+        Validate.isTrue(javaType.getName().contains("."), "请将实体类的基本类型修改为包装类型;出问题的类型：%s",javaType.getName() );
         for (int i = 0; i < JAVA_TYPE_MAPPING_CELL_TYPES.length; i++) {
             if (JAVA_TYPES[i] == javaType) {
                 return i;
