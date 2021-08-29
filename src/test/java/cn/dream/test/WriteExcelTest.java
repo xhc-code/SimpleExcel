@@ -2,6 +2,7 @@ package cn.dream.test;
 
 import cn.dream.handler.module.CopyExcel;
 import cn.dream.handler.module.WriteExcel;
+import cn.dream.test2.entity.StudentEntity;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -43,7 +44,7 @@ public class WriteExcelTest {
         initData();
     }
 
-    private static List<StudentTestEntity> studentTestEntityList = new ArrayList<>();
+    private static List<StudentEntity> studentTestEntityList = new ArrayList<>();
 
     static WriteExcel writeExcel = null;
 
@@ -51,7 +52,7 @@ public class WriteExcelTest {
      * 初始化数据
      */
     public static void initData(){
-        StudentTestEntity studentTestEntity = new StudentTestEntity();
+        StudentEntity studentTestEntity = new StudentEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setName("恶魔001");
         studentTestEntity.setAge(21);
@@ -59,7 +60,7 @@ public class WriteExcelTest {
         studentTestEntity.setSuccess(true);
         studentTestEntityList.add(studentTestEntity);
 
-        studentTestEntity = new StudentTestEntity();
+        studentTestEntity = new StudentEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setName("恶魔002");
         studentTestEntity.setAge(23);
@@ -68,7 +69,7 @@ public class WriteExcelTest {
         studentTestEntity.setBirthday(new Date());
         studentTestEntityList.add(studentTestEntity);
 
-        studentTestEntity = new StudentTestEntity();
+        studentTestEntity = new StudentEntity();
         studentTestEntity.setUid("002");
         studentTestEntity.setName("恶魔005");
         studentTestEntity.setAge(29);
@@ -87,7 +88,7 @@ public class WriteExcelTest {
 
         writeExcel.createSheet("我是学生列表");
 
-        writeExcel.setSheetData(StudentTestEntity.class,studentTestEntityList);
+        writeExcel.setSheetData(StudentEntity.class,studentTestEntityList);
 
         writeExcel.generateHeader();
         writeExcel.generateBody();

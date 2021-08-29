@@ -16,7 +16,7 @@ public abstract class WorkbookPropScope {
     protected static final String[] IGNORE_PROP = new String[]{"globalCellStyle","cacheCellStyleMap"};
 
     /**
-     * 单元格样式缓存Map,避免创建过多的样式对象
+     * 单元格样式缓存Map,避免创建过多的样式对象;一个Workbook仅有一个此Map对象即可
      */
     @RequireCopy
     protected Map<Integer, CellStyle> cacheCellStyleMap;

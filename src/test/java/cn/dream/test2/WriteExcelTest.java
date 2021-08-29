@@ -52,9 +52,8 @@ public class WriteExcelTest {
         studentList.add(
                 StudentEntity.builder()
                         .uid("001").name("张三").age(25).birthdayDate(new Date())
-                        .createMillisecond(System.currentTimeMillis()).isPublic((byte) 0)
+                        .createMillisecond(System.currentTimeMillis()).isPublic(0)
                         .provinceName("北京市").cityName("朝阳区").distinctName(null)
-                        .p1("1").p2("2").p3("1")
                         .build()
         );
 
@@ -63,34 +62,30 @@ public class WriteExcelTest {
         studentList.add(
                 StudentEntity.builder()
                         .uid("002").name("赵四").age(22).birthdayDate(new Date())
-                        .createMillisecond(System.currentTimeMillis()).isPublic((byte) 1)
+                        .createMillisecond(System.currentTimeMillis()).isPublic(1)
                         .provinceName("北京市").cityName("东城区").distinctName(null)
-                        .p1("1").p2("2").p3("3")
                         .build()
         );
 
         studentList.add(
                 StudentEntity.builder()
                         .uid("005").name("王五").age(25).birthdayDate(new Date())
-                        .createMillisecond(System.currentTimeMillis()).isPublic((byte) 0)
+                        .createMillisecond(System.currentTimeMillis()).isPublic(0)
                         .provinceName("北京市").cityName("朝阳区").distinctName(null)
-                        .p1("7").p2("2").p3("1")
                         .build()
         );
         studentList.add(
                 StudentEntity.builder()
                         .uid("009").name("小白").age(23).birthdayDate(new Date())
-                        .createMillisecond(System.currentTimeMillis()).isPublic((byte) 1)
+                        .createMillisecond(System.currentTimeMillis()).isPublic(1)
                         .provinceName("北京市").cityName("朝阳区").distinctName(null)
-                        .p1("7").p2("2").p3("3")
                         .build()
         );
         studentList.add(
                 StudentEntity.builder()
                         .uid("006").name("李四").age(21).birthdayDate(new Date())
-                        .createMillisecond(System.currentTimeMillis()).isPublic((byte) 1)
+                        .createMillisecond(System.currentTimeMillis()).isPublic(1)
                         .provinceName("郑州市").cityName("朝阳区").distinctName(null)
-                        .p1("1").p2("2").p3("3")
                         .build()
         );
 

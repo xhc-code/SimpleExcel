@@ -1,7 +1,5 @@
 package cn.dream.handler;
 
-import cn.dream.test.StudentTestEntity;
-
 import java.io.Serializable;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.InvocationTargetException;
@@ -86,27 +84,6 @@ public class FieldNameFunction<T> implements Serializable {
 
     public List<SSupplier> getFieldSupplierList(){
         return FieldSupplierList;
-    }
-
-
-    public static void main(String[] args) throws InvocationTargetException, NoSuchMethodException, IllegalAccessException, NoSuchFieldException {
-
-
-        FieldNameFunction<StudentTestEntity> studentTestEntityFieldNameFunction = new FieldNameFunction<>();
-
-        studentTestEntityFieldNameFunction.addFieldGetMethod(StudentTestEntity::getName).addFieldGetMethod(StudentTestEntity::getSuccess1);
-        studentTestEntityFieldNameFunction.addFieldGetMethod(StudentTestEntity::getIsPublic);
-
-
-        studentTestEntityFieldNameFunction.getFieldSupplierList().stream().forEach(item ->{
-            System.out.println("get:" + item.get());
-            System.out.println("toPropName: " + item.toPropertyName());
-            System.out.println("toColumnName: " + item.toColumnName());
-        });
-
-
-//        SerializedLambda
-
     }
 
 }

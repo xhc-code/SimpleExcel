@@ -2,15 +2,13 @@ package cn.dream.handler;
 
 import cn.dream.anno.ExcelField;
 import cn.dream.anno.MergeField;
-import cn.dream.anno.handler.excelfield.*;
-import cn.dream.enu.HandlerTypeEnum;
 import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.ValueTypeUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -25,17 +23,28 @@ import java.lang.reflect.Field;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  *
  * @param <T> 创建实例返回的对象的值
  */
+@Slf4j
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractExcel<T> extends WorkbookPropScope {
+
+    protected static final Field[] EMPTY_FIELDS = new Field[0];
+
+    protected static final CellType[] EMPTY_CELL_TYPES = new CellType[0];
+
+    protected static final String[] TYPE_STRINGS = new String[0];
+
+    protected static final String STRING_DELIMITER = "|_|";
+
+    protected static final String EMPTY_STRING = "Null";
+
+
 
 
     /* ===========                  全局静态常量字段                       =========================  */
@@ -140,15 +149,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             {0}, {2}, {2}, {2}, {2}, {2}, {2}, {1, 4}, {2},{2}
     };
 
-    private static final CellType[] EMPTY_CELL_TYPES = new CellType[0];
-
-    private static final String[] TYPE_STRINGS = new String[0];
-
-    protected static final String STRING_DELIMITER = "|_|";
-
-    protected static final String EMPTY_STRING = "Null";
-
-
     /* ======          实例字段  ======================*/
 
     private CellStyle defaultCellStyle;
@@ -165,6 +165,10 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected boolean transfer = false;
 
+    /**
+     * 设置当前对象是否是通过 转化 方法进行实例的；比如 CopyExcel -> WriteExcel 就属于转化字段,此transfer就为true
+     * @param o
+     */
     protected void setTransferBeTure(Object o){
         Validate.notNull(o);
         Validate.isInstanceOf(AbstractExcel.class,o);
@@ -172,7 +176,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 转换为合适的单元格类型
+     * 从Java类型转换为合适的单元格类型
      *
      * @param javaType Java类型
      */
@@ -216,17 +220,17 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     /**
      * 记录数据验证的Map
      */
-    private Map<Field, RecordDataValidator> recordDataValidatorMap = null;
+    protected Map<Field, RecordDataValidator> recordDataValidatorMap = null;
 
     /**
      * 记录自动列宽的信息
      */
-    private Map<Field,CellAddressRange> recordAutoColumnMap = null;
+    protected Map<Field,CellAddressRange> recordAutoColumnMap = null;
 
     /**
      * 记录合并单元格的信息，是指基于行自动合并的单元格信息
      */
-    private Map<String, CellAddressRange> recordCellAddressRangeMap = null;
+    protected Map<String, CellAddressRange> recordCellAddressRangeMap = null;
 
 
     /**
@@ -247,7 +251,14 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected List<Consumer<AbstractExcel<?>>> taskConsumer = new ArrayList<>();
 
+    /**
+     * 忽略应用的字段列表
+     */
+    protected List<String> ignoreFieldApplyList = new ArrayList<>();
 
+    /**
+     * 实例化 实例字段，给默认值
+     */
     protected AbstractExcel(){
         recordDataValidatorMap = new HashMap<>();
         recordAutoColumnMap = new HashMap<>();
@@ -269,7 +280,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 初始化后续的消费者列表
+     * 避免准备实例化时,WorkBook没有值，所以延迟初始化,初始化后续的消费者列表
      */
     public void initConsumerData(){
         taskConsumer.forEach(c -> c.accept(this));
@@ -277,7 +288,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 仅在第一次实例化对象的时候调用,xxx.newInstance
+     * 仅在第一次实例化对象的时候调用,xxx.newInstance;如果将 cacheCellStyleMap 保持为单例,需要确保使用的都是同一个Wordbook对象
      */
     public void oneInit(){
         cacheCellStyleMap = Collections.synchronizedMap(new HashMap<>());
@@ -301,6 +312,11 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         return this.sheet;
     }
 
+    /**
+     * 验证Sheet名称是否通过,并转化为安全的SheetName返回,避免转义符等的存在
+     * @param sheetName
+     * @return
+     */
     protected String validatePassReturnSafeSheetName(String sheetName){
         WorkbookUtil.validateSheetName(sheetName);
         sheetName = sheetName.trim();
@@ -309,7 +325,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 如果不存在，则常见Sheet
+     * 如果不存在，则创建Sheet
+     * @param workbook 工作簿对象
+     * @param sheetName Sheet名称
      */
     protected Sheet createSheetIfNotExists(Workbook workbook, String sheetName) {
         String safeSheetName = validatePassReturnSafeSheetName(sheetName);
@@ -322,25 +340,20 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /**
      * 设置Sheet相关的数据
-     * @param dataCls
-     * @param dataColl
+     * @param dataCls 数据集合的ofType类型
+     * @param dataColl 数据集合
      */
     protected <Entity> void setSheetData(Class<Entity> dataCls, List<Entity> dataColl){
         Field[] notStaticAndFinalFields = ReflectionUtils.getNotStaticAndFinalFields(dataCls);
-        Field[] fields = Arrays.stream(notStaticAndFinalFields).filter(field -> field.isAnnotationPresent(ExcelField.class)).peek(org.springframework.util.ReflectionUtils::makeAccessible).collect(Collectors.toList()).toArray(notStaticAndFinalFields);
+        Field[] fields = Arrays.stream(notStaticAndFinalFields).filter(field -> field.isAnnotationPresent(ExcelField.class)).peek(org.springframework.util.ReflectionUtils::makeAccessible).collect(Collectors.toList()).toArray(EMPTY_FIELDS);
 
         List<Field> unmodifiableList = Collections.unmodifiableList(new ArrayList<>(Arrays.asList(fields)));
         this.sheetData = new SheetData<Entity>(dataCls, unmodifiableList, dataColl);
     }
 
     /**
-     * 忽略的字段列表
-     */
-    private List<String> ignoreFieldApplyList = new ArrayList<>();
-
-    /**
      * 设置忽略的应用字段列表
-     * @param ignoreFieldGetterMethod
+     * @param ignoreFieldGetterMethod 忽略的Getter方法列表
      * @param <GetterMethod>
      */
     public <GetterMethod> void setIgnoreFieldApplyList(FieldNameFunction<GetterMethod> ignoreFieldGetterMethod){
@@ -358,19 +371,24 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected List<Field> getFields() {
-        List<Field> fields = this.sheetData.getFieldList();
-        return fields;
+        return this.sheetData.getFieldList();
     }
 
+    /**
+     * 获取指定Sheet的指定单元格是否是合并单元格对象，如果是返回合并单元格对象，否则返回null
+     * @param sheet 被操作的Sheet对象
+     * @param cell 单元格
+     * @return 存在返回合并单元格对象，否则返回null
+     */
     protected CellRangeAddress getCellRangeAddress(Sheet sheet, Cell cell) {
         return getCellRangeAddress(sheet,cell.getRowIndex(),cell.getColumnIndex());
     }
 
     /**
      * 获取指定Sheet里的指定行和列所在的合并单元格对象
-     * @param sheet
-     * @param rowIndex
-     * @param colIndex
+     * @param sheet 被操作的Sheet对象
+     * @param rowIndex 单元格所在的行索引
+     * @param colIndex 单元格所在的列索引
      * @return
      */
     protected CellRangeAddress getCellRangeAddress(Sheet sheet, final int rowIndex, final int colIndex) {
@@ -379,7 +397,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 获取数组中最大的值
+     * 获取数组中最大的值并返回
      * @param nums
      * @return
      */
@@ -395,7 +413,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
 
     /**
-     * 创建模板Sheet的验证对象
+     * 创建Sheet的验证数据对象
      * @param selectedItems 下拉选择项的列表
      * @param cellAddressRange 应用验证的区间范围对象
      */
@@ -421,9 +439,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /**
      * 获取合并单元格的组名
-     * @param o
-     * @param field
-     * @param sheetData
+     * @param o 对象
+     * @param field 对象的属性
+     * @param sheetData 其他信息数据
      * @return
      */
     protected String doGetGroupName(Object o,Field field,SheetData sheetData) throws IllegalAccessException {
@@ -432,10 +450,15 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             return null;
         }
         return field.getName().concat(STRING_DELIMITER).concat(value.toString());
-
     }
 
-    private String getMergeCellGroupName(Object o, Field field){
+    /**
+     * 获取合并单元格的组名称
+     * @param o
+     * @param field
+     * @return
+     */
+    protected String getMergeCellGroupName(Object o, Field field) {
         if(cacheMergeFieldGroupKeyMap.containsKey(field)){
             return cacheMergeFieldGroupKeyMap.get(field);
         }
@@ -470,7 +493,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                 doGetGroupName += STRING_DELIMITER +  groupKey;
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            log.error("非法访问{}字段，导致自动生成合并单元格组名失效,请排查问题",field.getName());
         }
         return doGetGroupName;
     }
@@ -478,153 +501,10 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
 
     /**
-     * [写入Excel时会调用]
-     * 处理单元格的写入数据和调用针对单元格的一些额外的操作
-     */
-    protected void writeCellAndNoticeCls(Workbook workbook, Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
-
-        Validate.notNull(handlerTypeEnum);
-        Validate.notNull(field);
-        Validate.notNull(toCellSupplier);
-
-        if(HandlerTypeEnum.HEADER == handlerTypeEnum){
-
-        }else if(HandlerTypeEnum.BODY == handlerTypeEnum){
-            Validate.notNull(o);
-        }
-
-        ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
-
-        // 校验是否包含此字段
-        if (fieldAnnotation.apply() && !ignoreFieldApplyList.contains(field.getName())) {
-
-            Cell cell = toCellSupplier.get();
-
-            // 设置自动列宽
-            if(fieldAnnotation.autoSizeColumn()){
-                recordAutoColumnMap.putIfAbsent(field,CellAddressRange.builder()
-                        .firstCol(cell.getColumnIndex())
-                        .lastCol(cell.getColumnIndex())
-                        .build());
-            }
-
-
-            // 这里记录下来位置，然后放到write的时候进行设置
-            // 设置此Cell可选择的值列表
-            if(HandlerTypeEnum.BODY == handlerTypeEnum){
-
-                // Excel下拉框选项的处理
-                String s = fieldAnnotation.converterValueExpression();
-                if(StringUtils.isNotEmpty(s) || fieldAnnotation.selectValueListCls() != DefaultSelectValueListAnnoHandler.class ){
-                    RecordDataValidator recordDataValidator = recordDataValidatorMap.computeIfAbsent(field, field1 -> {
-                        Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = fieldAnnotation.selectValueListCls();
-                        DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
-                        List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(fieldAnnotation.selectValues());
-                        List<String> selectValueListAnnoHandlerSelectValues = defaultSelectValueListAnnoHandler.getSelectValues(parseExpression);
-                        SheetData sheetData = this.sheetData;
-                        return RecordDataValidator.builder()
-                                .selectedItems(selectValueListAnnoHandlerSelectValues.toArray(TYPE_STRINGS))
-                                .handlerTypeEnum(handlerTypeEnum)
-                                .dataCls(sheetData.getDataCls())
-                                .field(field)
-                                .o(o)
-                                .cellAddressRange(
-                                        CellAddressRange.builder()
-                                                .firstRow(cell.getRowIndex())
-                                                .firstCol(cell.getColumnIndex())
-                                                .build()
-                                ).build();
-                    });
-
-                    CellAddressRange cellAddressRange = recordDataValidator.getCellAddressRange();
-                    cellAddressRange.setLastRow(cell.getRowIndex());
-                    cellAddressRange.setLastCol(cell.getColumnIndex());
-                }
-
-
-                if(fieldAnnotation.mergeCell()){
-                    // 记录合并单元格的范围列表
-                    String groupName = getMergeCellGroupName(o, field);
-                    Integer fieldIndex = pointerLocationMergeCellMap.getOrDefault(field.getName(),0);
-                    String joinGroupName = groupName + STRING_DELIMITER + fieldIndex;
-
-                    if(StringUtils.isNotEmpty(joinGroupName)){
-                        CellAddressRange cellAddressRange = recordCellAddressRangeMap.get(joinGroupName);
-                        if(cellAddressRange == null){
-                            pointerLocationMergeCellMap.put(field.getName(),++fieldIndex);
-                            cellAddressRange = CellAddressRange.builder().firstCol(cell.getColumnIndex()).firstRow(cell.getRowIndex()).lastCol(cell.getColumnIndex()).build();
-                            recordCellAddressRangeMap.put(groupName + STRING_DELIMITER + fieldIndex, cellAddressRange);
-                        }
-                        cellAddressRange.setLastRow(cell.getRowIndex());
-                    }
-                }
-
-
-            }
-
-            try {
-                field.setAccessible(true);
-                AtomicReference<Class<?>> classAtomicReference = new AtomicReference<>(field.getType());
-                AtomicReference<Object> valueAtomicReference = new AtomicReference<>(null);
-                // 这里判断处理的类型是不是 BODY阶段，否则，o参数是为null，取不到值的，相应的默认值也不进行赋值；原因是 HEADER和FOOTER(未来可能存在)是针对注解本身的值进行操作的
-                if(HandlerTypeEnum.BODY == handlerTypeEnum){
-                    valueAtomicReference.compareAndSet(null,field.get(o));
-                    if(StringUtils.isNotEmpty(fieldAnnotation.defaultValue())){
-                        valueAtomicReference.compareAndSet(null,fieldAnnotation.defaultValue());
-                    }
-
-                    // 当字段有值才需要进行转换
-                    if(ObjectUtils.isNotEmpty(valueAtomicReference.get())){
-                        // 字典转换值
-                        Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
-                        DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
-                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
-                        defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
-                        if(!dictDataMap.isEmpty()){
-                            if(fieldAnnotation.enableConverterMultiValue()){
-                                defaultConverterValueAnnoHandler.multiMapping(dictDataMap,classAtomicReference,valueAtomicReference);
-                            }else{
-                                defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,classAtomicReference,valueAtomicReference);
-                            }
-                            classAtomicReference.set(valueAtomicReference.get().getClass());
-                        }
-                    }
-
-
-                    Class<? extends DefaultWriteValueAnnoHandler> handlerWriteValue = fieldAnnotation.handlerWriteValue();
-                    DefaultWriteValueAnnoHandler writeValueAnnoHandler = ReflectionUtils.newInstance(handlerWriteValue);
-                    writeValueAnnoHandler.afterHandler(classAtomicReference, valueAtomicReference);
-
-                }else if(HandlerTypeEnum.HEADER == handlerTypeEnum){
-                    classAtomicReference.set(String.class);
-                    valueAtomicReference.set(fieldAnnotation.name());
-                }
-
-                // 设置样式单元格
-                DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.cellStyleCls());
-                CellStyle globalCellStyle = getGlobalCellStyle();
-                defaultExcelFieldStyleAnnoHandler.cellStyle(globalCellStyle,valueAtomicReference.get(),handlerTypeEnum);
-                globalCellStyle = createCellStyleIfNotExists(workbook,globalCellStyle);
-                cell.setCellStyle(globalCellStyle);
-
-                currentHandlerFieldAnno = fieldAnnotation;
-                setCellValue(cell, classAtomicReference.get(), valueAtomicReference.get());
-            } catch (IllegalAccessException e) {
-                onIllegalAccessException(e);
-            }
-        }
-
-    }
-
-    /**
      * [仅限WriteExcel有效]
      * 当前正在处理的currentField对应的ExcelField注解对象
      */
     protected ExcelField currentHandlerFieldAnno=null;
-
-    protected void onIllegalAccessException(IllegalAccessException illegalAccessException) {
-        illegalAccessException.printStackTrace();
-    }
 
     protected CellStyle getGlobalCellStyle() {
         return getGlobalCellStyle(null);
@@ -654,17 +534,17 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 将当前处理的字段放到线程本地环境中
+     * 将当前处理的字段放到线程本地环境中,主要是通过线程上下文共享给其他操作进行使用
      *   注意：使用 {@code setLocalThreadExcelField } 之后一定要调用 {@code clearLocalThreadExcelField} 进行清除
      */
     private static final ThreadLocal<ExcelField> EXCEL_FIELD_THREAD_LOCAL = new ThreadLocal<>();
-    public static void setLocalThreadExcelField(ExcelField excelField){
+    protected static void setLocalThreadExcelField(ExcelField excelField){
         EXCEL_FIELD_THREAD_LOCAL.set(excelField);
     }
     public static ExcelField getLocalThreadExcelField(){
         return EXCEL_FIELD_THREAD_LOCAL.get();
     }
-    public static void clearLocalThreadExcelField(){
+    protected static void clearLocalThreadExcelField(){
         EXCEL_FIELD_THREAD_LOCAL.remove();
     }
 
@@ -729,9 +609,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 创建单元格范围的单元格
+     * 如果不存在，则创建合并单元格范围的单元格
      */
-    private void createCellOfCellRangeIfNotExists(Sheet sheet,CellRangeAddress cellAddresses) {
+    protected void createCellOfCellRangeIfNotExists(Sheet sheet,CellRangeAddress cellAddresses) {
         for (int rowIndex = cellAddresses.getFirstRow(); rowIndex < cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
             for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex < cellAddresses.getLastColumn(); columnIndex++) {
@@ -759,7 +639,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 获取Model Sheet表里的合并单元格的第一个单元格对象
+     * 获取Sheet表里的合并单元格的第一个单元格对象
      *
      * @param cellAddresses
      * @return
@@ -808,8 +688,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /**
      * 获取单元格的值，并进行相应的转换类型
-     *
-     * @param cell
+     * @param cell 单元格对象
      */
     protected Object getCellValue(Cell cell) {
         CellType cellType = cell.getCellType();
@@ -880,6 +759,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         recordDataValidatorMap.clear();
     }
 
+    /**
+     * 将临时存起来的数据写入到Workbook中
+     */
     protected abstract void flushData();
 
     /**
@@ -890,8 +772,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     public void write(File outputFile) throws IOException {
         write(getWorkbook(),getSheet(),outputFile);
     }
-
-
 
     /**
      * 将最终的数据及存放的缓存验证对等信息一同写入到Excel中

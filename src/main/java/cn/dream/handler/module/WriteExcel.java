@@ -1,11 +1,22 @@
 package cn.dream.handler.module;
 
 import cn.dream.anno.Excel;
+import cn.dream.anno.ExcelField;
+import cn.dream.anno.handler.excelfield.DefaultConverterValueAnnoHandler;
+import cn.dream.anno.handler.excelfield.DefaultExcelFieldStyleAnnoHandler;
+import cn.dream.anno.handler.excelfield.DefaultSelectValueListAnnoHandler;
+import cn.dream.anno.handler.excelfield.DefaultWriteValueAnnoHandler;
 import cn.dream.enu.HandlerTypeEnum;
 import cn.dream.handler.AbstractExcel;
+import cn.dream.handler.bo.CellAddressRange;
+import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -13,9 +24,12 @@ import org.apache.poi.ss.usermodel.Workbook;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
+@Slf4j
 public class WriteExcel extends AbstractExcel<WriteExcel> {
 
     /**
@@ -102,6 +116,149 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         Validate.notNull(getSheet(),"请设置Sheet对象");
         iCustomizeCell.customize(getWorkbook(),getSheet(), cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle));
     }
+
+
+    /**
+     * [写入Excel时会调用]
+     * 处理单元格的写入数据和调用针对单元格的一些额外的操作
+     */
+    protected void writeCellAndNoticeCls(Workbook workbook, Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
+
+        Validate.notNull(handlerTypeEnum);
+        Validate.notNull(field);
+        Validate.notNull(toCellSupplier);
+
+        if(HandlerTypeEnum.HEADER == handlerTypeEnum){
+
+        }else if(HandlerTypeEnum.BODY == handlerTypeEnum){
+            Validate.notNull(o);
+        }
+
+        ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
+
+        // 校验是否包含此字段
+        if (fieldAnnotation.apply() && !ignoreFieldApplyList.contains(field.getName())) {
+
+            Cell cell = toCellSupplier.get();
+
+            // 设置自动列宽
+            if(fieldAnnotation.autoSizeColumn()){
+                recordAutoColumnMap.putIfAbsent(field, CellAddressRange.builder()
+                        .firstCol(cell.getColumnIndex())
+                        .lastCol(cell.getColumnIndex())
+                        .build());
+            }
+
+
+            // 这里记录下来位置，然后放到write的时候进行设置
+            // 设置此Cell可选择的值列表
+            if(HandlerTypeEnum.BODY == handlerTypeEnum){
+
+                // Excel下拉框选项的处理
+                String s = fieldAnnotation.converterValueExpression();
+                if(StringUtils.isNotEmpty(s) || fieldAnnotation.selectValueListCls() != DefaultSelectValueListAnnoHandler.class ){
+                    RecordDataValidator recordDataValidator = recordDataValidatorMap.computeIfAbsent(field, field1 -> {
+                        Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = fieldAnnotation.selectValueListCls();
+                        DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
+                        List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(fieldAnnotation.selectValues());
+                        List<String> selectValueListAnnoHandlerSelectValues = defaultSelectValueListAnnoHandler.getSelectValues(parseExpression);
+                        SheetData sheetData = this.sheetData;
+                        return RecordDataValidator.builder()
+                                .selectedItems(selectValueListAnnoHandlerSelectValues.toArray(TYPE_STRINGS))
+                                .handlerTypeEnum(handlerTypeEnum)
+                                .dataCls(sheetData.getDataCls())
+                                .field(field)
+                                .o(o)
+                                .cellAddressRange(
+                                        CellAddressRange.builder()
+                                                .firstRow(cell.getRowIndex())
+                                                .firstCol(cell.getColumnIndex())
+                                                .build()
+                                ).build();
+                    });
+
+                    CellAddressRange cellAddressRange = recordDataValidator.getCellAddressRange();
+                    cellAddressRange.setLastRow(cell.getRowIndex());
+                    cellAddressRange.setLastCol(cell.getColumnIndex());
+                }
+
+
+                if(fieldAnnotation.mergeCell()){
+                    // 记录合并单元格的范围列表
+                    String groupName = getMergeCellGroupName(o, field);
+                    if(StringUtils.isNotEmpty(groupName)){
+                        Integer fieldIndex = pointerLocationMergeCellMap.getOrDefault(field.getName(),0);
+                        String joinGroupName = groupName + STRING_DELIMITER + fieldIndex;
+
+                        if(StringUtils.isNotEmpty(joinGroupName)){
+                            CellAddressRange cellAddressRange = recordCellAddressRangeMap.get(joinGroupName);
+                            if(cellAddressRange == null){
+                                pointerLocationMergeCellMap.put(field.getName(),++fieldIndex);
+                                cellAddressRange = CellAddressRange.builder().firstCol(cell.getColumnIndex()).firstRow(cell.getRowIndex()).lastCol(cell.getColumnIndex()).build();
+                                recordCellAddressRangeMap.put(groupName + STRING_DELIMITER + fieldIndex, cellAddressRange);
+                            }
+                            cellAddressRange.setLastRow(cell.getRowIndex());
+                        }
+                    }
+                }
+
+
+            }
+
+            try {
+                field.setAccessible(true);
+                AtomicReference<Class<?>> classAtomicReference = new AtomicReference<>(field.getType());
+                AtomicReference<Object> valueAtomicReference = new AtomicReference<>(null);
+                // 这里判断处理的类型是不是 BODY阶段，否则，o参数是为null，取不到值的，相应的默认值也不进行赋值；原因是 HEADER和FOOTER(未来可能存在)是针对注解本身的值进行操作的
+                if(HandlerTypeEnum.BODY == handlerTypeEnum){
+                    valueAtomicReference.compareAndSet(null,field.get(o));
+                    if(StringUtils.isNotEmpty(fieldAnnotation.defaultValue())){
+                        valueAtomicReference.compareAndSet(null,fieldAnnotation.defaultValue());
+                    }
+
+                    // 当字段有值才需要进行转换
+                    if(ObjectUtils.isNotEmpty(valueAtomicReference.get())){
+                        // 字典转换值
+                        Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                        DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
+                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                        defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
+                        if(!dictDataMap.isEmpty()){
+                            if(fieldAnnotation.enableConverterMultiValue()){
+                                defaultConverterValueAnnoHandler.multiMapping(dictDataMap,classAtomicReference,valueAtomicReference);
+                            }else{
+                                defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,classAtomicReference,valueAtomicReference);
+                            }
+                            classAtomicReference.set(valueAtomicReference.get().getClass());
+                        }
+                    }
+
+
+                    Class<? extends DefaultWriteValueAnnoHandler> handlerWriteValue = fieldAnnotation.handlerWriteValue();
+                    DefaultWriteValueAnnoHandler writeValueAnnoHandler = ReflectionUtils.newInstance(handlerWriteValue);
+                    writeValueAnnoHandler.afterHandler(classAtomicReference, valueAtomicReference);
+
+                }else if(HandlerTypeEnum.HEADER == handlerTypeEnum){
+                    classAtomicReference.set(String.class);
+                    valueAtomicReference.set(fieldAnnotation.name());
+                }
+
+                // 设置样式单元格
+                DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.cellStyleCls());
+                CellStyle globalCellStyle = getGlobalCellStyle();
+                defaultExcelFieldStyleAnnoHandler.cellStyle(globalCellStyle,valueAtomicReference.get(),handlerTypeEnum);
+                globalCellStyle = createCellStyleIfNotExists(workbook,globalCellStyle);
+                cell.setCellStyle(globalCellStyle);
+
+                currentHandlerFieldAnno = fieldAnnotation;
+                setCellValue(cell, classAtomicReference.get(), valueAtomicReference.get());
+            } catch (IllegalAccessException e) {
+                log.error("非法访问 {} 字段,需要排查原因",field.getName());
+            }
+        }
+
+    }
+
 
     private WriteExcel(){}
 

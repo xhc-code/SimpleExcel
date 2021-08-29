@@ -1,7 +1,6 @@
 package cn.dream.util;
 
 import cn.dream.excep.NotInstanceClassObjectException;
-import cn.dream.test.StudentTestEntity;
 import cn.dream.util.anno.Feature.RequireCopy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
@@ -282,19 +281,6 @@ public class ReflectionUtils {
 			}
 		});
 
-	}
-
-	public static void main(String[] args) {
-
-		StudentTestEntity studentTestEntity = new StudentTestEntity();
-		studentTestEntity.setAge(27);
-		studentTestEntity.setName("我是恶魔");
-
-		StudentTestEntity studentTestEntity2 = new StudentTestEntity();
-		copyPropertiesByAnno(studentTestEntity,studentTestEntity2);
-
-		System.out.println(studentTestEntity);
-		System.out.println(studentTestEntity2);
 	}
 
 

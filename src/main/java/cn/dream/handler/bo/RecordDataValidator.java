@@ -27,6 +27,9 @@ public class RecordDataValidator {
      */
     private String[] selectedItems;
 
+    /**
+     * 处理的类型
+     */
     private HandlerTypeEnum handlerTypeEnum;
 
     /**

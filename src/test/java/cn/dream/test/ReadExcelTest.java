@@ -57,7 +57,7 @@ public class ReadExcelTest {
 
         ReadExcel readExcel2 = readExcel.readSheet("Sheet3");
 
-        readExcel2.setSheetDataCls(StudentTestEntity.class);
+        readExcel2.setSheetDataCls(StudentEntity.class);
         readExcel2.readData();
         readExcel2.getResult().forEach(System.out::println);
     }

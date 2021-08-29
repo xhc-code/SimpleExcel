@@ -76,6 +76,9 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         return writeExcel;
     }
 
+    /**
+     * 数据点的容器
+     */
     @Getter
     @Setter
     @ToString
@@ -242,8 +245,6 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             return true;
         }
     }
-
-    private static final Consumer<PointData> POINT_DATA_EMPTY_CONSUMER = pd -> {};
 
     protected CellStyle createCellStyleIfNotExists(CellStyle cellStyle){
         return super.createCellStyleIfNotExists(cellStyle);

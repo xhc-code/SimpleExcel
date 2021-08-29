@@ -129,10 +129,16 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         Map<String, Field> fieldMap = null;
 
         if(byHeaderName){
-            fieldMap = fieldList.stream().collect(Collectors.toMap(Field::getName, field -> field));
+            fieldMap = fieldList.stream().collect(Collectors.toMap(field -> {
+                ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
+                return Optional.ofNullable(fieldAnnotation.validateHeaderName()).orElse(fieldAnnotation.name());
+            }, field -> field));
         }
 
         Row row = getSheet().getRow(rowIndex);
+        if(row == null){
+            return;
+        }
 
         // 按照索引填充数据
         Object newInstance = ReflectionUtils.newInstance(dataCls,false);
@@ -144,9 +150,10 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             if(byHeaderName){
                 String headerNameAsString = headerInfo.getHeaderNameAsString();
                 field = fieldMap.get(headerNameAsString);
-                fieldAnnotation = field.getAnnotation(ExcelField.class);
                 Validate.notNull(field, "没有找到名称为 %s 的字段对象",headerNameAsString);
+                fieldAnnotation = field.getAnnotation(ExcelField.class);
             }else{
+                Validate.isTrue( i < fieldList.size() , "当前字段集合不存在索引 %d ,请检查实体与Excel之间的映射",i);
                 field = fieldList.get(i);
                 fieldAnnotation = field.getAnnotation(ExcelField.class);
                 if(fieldAnnotation != null && fieldAnnotation.validateHeader()){
@@ -161,6 +168,9 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             Cell cell = row.getCell(headerInfo.getColIndex());
 
             Class<?> fieldType = field.getType();
+            if(cell == null){
+                continue;
+            }
             Object cellValue = getMergeCellValue(getSheet(),cell);
 
             if(ObjectUtils.isEmpty(cellValue)){
