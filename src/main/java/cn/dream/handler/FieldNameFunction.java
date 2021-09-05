@@ -13,13 +13,24 @@ import java.util.stream.Collectors;
 
 public class FieldNameFunction<T> implements Serializable {
 
+    /**
+     * Getter方法前缀
+     */
     private static final String GETTER_PREFIX = "get";
+    /**
+     * Setter方法前缀
+     */
     private static final String SETTER_PREFIX = "set";
-    // boolean才会使用IS
+    /**
+     * boolean才会使用IS
+     */
     private static final String IS_PREFIX = "is";
 
     private static final String WRITE_REPLACE = "writeReplace";
 
+    /**
+     * JNI的基本布尔值的类型
+     */
     private static final String JNI_BASE_BOOLEAN = "()Z";
 
 
@@ -62,7 +73,14 @@ public class FieldNameFunction<T> implements Serializable {
         return new FieldNameFunction<>();
     }
 
-
+    /**
+     * 添加字段的Getter方法
+     * @param sFunction
+     * @return
+     * @throws NoSuchMethodException
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
     public FieldNameFunction<T> addFieldGetMethod(SFunction<T,?> sFunction) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Method declaredMethod = sFunction.getClass().getDeclaredMethod(WRITE_REPLACE);
         declaredMethod.setAccessible(true);
@@ -80,8 +98,10 @@ public class FieldNameFunction<T> implements Serializable {
     }
 
 
-
-
+    /**
+     * 获取字段Getter方法列表
+     * @return
+     */
     public List<SSupplier> getFieldSupplierList(){
         return FieldSupplierList;
     }
