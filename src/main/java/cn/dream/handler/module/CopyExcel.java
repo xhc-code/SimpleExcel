@@ -208,7 +208,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             setCellValue(toFirstCell, pointData.getValueTypeCls(), pointData.getValue());
 
             if(iHandlerCellStyle != null) {
-                CellStyle globalCellStyle = toFirstCell.getCellStyle();
+                CellStyle globalCellStyle = getGlobalCellStyle();
                 iHandlerCellStyle.doHandlerCellStyle(pointData, globalCellStyle);
                 toFirstCell.setCellStyle(createCellStyleIfNotExists(globalCellStyle));
             }
@@ -237,7 +237,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             setCellValue(targetCurrentSheetRowCell, pointData.getValueTypeCls(), pointData.getValue());
 
             if(iHandlerCellStyle != null){
-                CellStyle globalCellStyle = targetCurrentSheetRowCell.getCellStyle();
+                CellStyle globalCellStyle = getGlobalCellStyle();
                 iHandlerCellStyle.doHandlerCellStyle(pointData,globalCellStyle);
                 targetCurrentSheetRowCell.setCellStyle(createCellStyleIfNotExists(globalCellStyle));
             }
@@ -264,9 +264,17 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
     @RequireCopy
     private IHandlerCellStyle iHandlerCellStyle;
 
+    /**
+     * 处理单元格样式
+     */
     @FunctionalInterface
     public interface IHandlerCellStyle {
 
+        /**
+         * 处理设置单元格样式
+         * @param pointData 数据点信息对象
+         * @param cellStyle 全局的样式，可以将样式设置到此对象,自动进行缓存
+         */
         void doHandlerCellStyle(PointData pointData,CellStyle cellStyle);
 
     }

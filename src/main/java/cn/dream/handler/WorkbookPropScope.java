@@ -4,12 +4,13 @@ import cn.dream.util.anno.Feature.RequireCopy;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Workbook;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
  * 声明仅在Workbook对象生命周期内的对象，仅一份实例
  */
-public abstract class WorkbookPropScope {
+abstract class WorkbookPropScope implements Serializable {
 
     /* ===========                  需要此次WordBook共享的对象                      =========================  */
 

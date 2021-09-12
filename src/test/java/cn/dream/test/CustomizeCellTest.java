@@ -1,9 +1,7 @@
 package cn.dream.test;
 
-import cn.dream.handler.module.CopyExcel;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test2.entity.StudentEntity;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.AfterAll;
@@ -18,15 +16,22 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 自定义单元格测试
+ */
 @SpringBootTest
-public class WriteExcelTest {
+public class CustomizeCellTest {
 
-
-    private static final String RESULT_PREFIX_DIRECTORY = "writeExcelOutput";
+    private static final String RESULT_PREFIX_DIRECTORY = "customizeExcelOutput";
 
     private static ClassPathResource classPathResource;
 
     private static File targetFile = null;
+
+    private static WriteExcel writeExcel;
+
+
+    private static List<StudentEntity> studentTestEntityList = new ArrayList<>();
 
     @BeforeAll
     public static void init() throws IOException {
@@ -44,13 +49,6 @@ public class WriteExcelTest {
         initData();
     }
 
-    private static List<StudentEntity> studentTestEntityList = new ArrayList<>();
-
-    static WriteExcel writeExcel = null;
-
-    /**
-     * 初始化数据
-     */
     public static void initData(){
         StudentEntity studentTestEntity = new StudentEntity();
         studentTestEntity.setUid("001");
@@ -78,71 +76,33 @@ public class WriteExcelTest {
         studentTestEntityList.add(studentTestEntity);
     }
 
-    /**
-     * 测试写入Excel基本数据
-     * @throws IOException
-     * @throws InvalidFormatException
-     */
     @Test
-    public void test1() throws IOException, InvalidFormatException {
+    public void test(){
 
-        writeExcel.createSheet("我是学生列表");
-
-        writeExcel.setSheetData(StudentEntity.class,studentTestEntityList);
-
-        writeExcel.generateHeader();
-        writeExcel.generateBody();
-
-
-    }
-
-    /**
-     * 测试创建Sheet是否有问题
-     */
-    @Test
-    public void test2(){
-        WriteExcel writeExcel = WriteExcelTest.writeExcel.newSheet("我是年纪");
+        writeExcel.createSheet("我是Sheet恶魔");
 
         writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+            Row row = sheet.createRow(3);
+            Cell cell = row.createCell(2);
+            cell.setCellValue("我是魔鬼哦");
 
             /**
              * 此CellStyle对象可自行缓存下来，重复使用，在通过putCellStyle时，会自行缓存并返回修改过的CellStyle对象
              */
-            Row row = sheet.createRow(1);
-            Cell cell = row.createCell(1);
-            cell.setCellValue("我是第二个Sheet");
-
             CellStyle cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cellStyle.setFillBackgroundColor(IndexedColors.RED.getIndex());
             cell.setCellStyle(putCellStyle.apply(cellStyle));
 
         });
 
-        /**
-         * 此方法适用于打开多Sheet操作的情况，这个方法主要用于写入一些临时存起来的数据
-         */
+        writeExcel.setSheetData(StudentEntity.class,studentTestEntityList);
+
+        writeExcel.generateBody();
+
         writeExcel.flushData();
 
-
     }
-
-    /**
-     * 测试Copy行
-     */
-    @Test
-    public void test3() throws IOException {
-
-        File file = new File(classPathResource.getFile(), "CopyExcel模板.xlsx");
-        CopyExcel copyExcel = writeExcel.newCopyExcel(WorkbookFactory.create(file));
-        copyExcel.toggleFromSheet(0);
-        copyExcel.createSheet("我是COpySheet");
-        copyExcel.copyRow(2,1,5,3);
-
-        copyExcel.flushData();
-
-    }
-
 
     /**
      * 最终写入到指定文件
@@ -152,5 +112,6 @@ public class WriteExcelTest {
     public static void after() throws IOException {
         writeExcel.write(targetFile);
     }
+
 
 }
