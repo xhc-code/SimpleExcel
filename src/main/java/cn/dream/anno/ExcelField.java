@@ -1,6 +1,7 @@
 package cn.dream.anno;
 
 import cn.dream.anno.handler.excelfield.*;
+import cn.dream.anno.mark.FutureUse;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -110,6 +111,13 @@ public @interface ExcelField {
 	 * @return
 	 */
 	MergeField[] mergeFields() default {};
+
+	/**
+	 * 用户可自行传递的JSON数据,此数据会传递到每个阶段
+	 * @return
+	 */
+	@FutureUse("功能未开发")
+	String dataJson() default "";
 
 }
 

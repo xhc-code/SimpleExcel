@@ -9,4 +9,7 @@ import java.lang.annotation.*;
 @Documented
 @Target({ElementType.FIELD,ElementType.TYPE,ElementType.METHOD})
 public @interface FutureUse {
+
+    String value() default "";
+
 }
