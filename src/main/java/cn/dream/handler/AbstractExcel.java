@@ -1,7 +1,9 @@
 package cn.dream.handler;
 
+import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
 import cn.dream.anno.MergeField;
+import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
 import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
@@ -775,14 +777,30 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /**
      * 将最终的数据及存放的缓存验证对等信息一同写入到Excel中
-     * @param workbook
-     * @param sheet
-     * @param outputFile
+     * @param workbook WorkBook工作簿对象
+     * @param sheet Sheet对象
+     * @param outputFile 写出的File文件目录
      * @throws IOException
      */
     protected void write(Workbook workbook, Sheet sheet, File outputFile) throws IOException {
         Validate.isTrue(!this.transfer,"转换对象不能操作此方法写入数据,请通过flushData进行写入数据");
         Validate.isTrue(!this.embeddedObject,"嵌入对象不能操作Write方法");
+
+
+        // 目录不存在则创建
+        if(!outputFile.exists()){
+            outputFile.mkdirs();
+        }
+
+        /**
+         * 生成导出的Excel文件的名称
+         */
+        Excel excelAnno = getSheetData().getExcelAnno();
+        DefaultExcelNameAnnoHandler defaultExcelNameAnnoHandler = ReflectionUtils.newInstance(excelAnno.handlerName());
+        String excelName = defaultExcelNameAnnoHandler.getName(excelAnno.name());
+        outputFile = new File(outputFile,excelName.concat(".").concat(excelAnno.extendFileType().getValue()));
+
+        // 开始写入数据
         writeData(sheet);
         try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
             workbook.write(outputStream);

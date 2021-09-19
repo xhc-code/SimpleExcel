@@ -2,6 +2,7 @@ package cn.dream.anno;
 
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
 import cn.dream.anno.handler.DefaultRowCellStyleAnnoHandler;
+import cn.dream.enu.WorkBookTypeEnum;
 
 import java.lang.annotation.*;
 
@@ -26,6 +27,12 @@ public @interface Excel {
 	 */
 	Class<? extends DefaultExcelNameAnnoHandler> handlerName() default DefaultExcelNameAnnoHandler.class;
 
+	/**
+	 * 导出Excel文件扩展名的类型
+	 * @return
+	 */
+	WorkBookTypeEnum extendFileType() default WorkBookTypeEnum.XLSX;
+
 	/**[导出时生效]
 	 * 处理设置行样式
 	 * @return
@@ -39,21 +46,21 @@ public @interface Excel {
 	 */
 	int rowIndex() default -1;
 
-	/**[导出时生效]
+	/**[{导出}时生效]
 	 * <span style='color:red'>仅导出时生效</span><br />
 	 * 生成的起始列索引，从0开始,-1为默认自动；全局列索引位置
 	 * @return
 	 */
 	int columnIndex() default -1;
 
-	/**[导出时生效]
+	/**[{读取}时生效]
 	 * <span style='color:red'>仅导入时生效</span><br />
 	 * Header表头的首行索引位置；不设置默认从0开始，也就是Excel第一行开始
 	 * @return
 	 */
 	int[] headerRowRangeIndex() default {};
 
-	/**[导出时生效]
+	/**[{读取}时生效]
 	 * <span style='color:red'>仅导入时生效</span><br />
 	 * Body数据的首行索引位置；不设置默认从1开始，也就是Excel第二行开始
 	 * @return

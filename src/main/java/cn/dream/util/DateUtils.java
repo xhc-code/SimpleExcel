@@ -51,6 +51,7 @@ public class DateUtils {
         System.out.println(String.format("parseDate: %s",date));
 
         System.out.println(String.format("formatDate: %s",formatDate(date,"yyyy-MM-dd HH:mm:ss")));
+        System.out.println(String.format("formatDate: %s",formatDate(date,"yyyy-MM-dd a HH:mm:ss")));
 
     }
 

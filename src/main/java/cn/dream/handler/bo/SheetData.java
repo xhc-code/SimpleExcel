@@ -30,7 +30,14 @@ public class SheetData<T> {
 
         if (this.dataCls.isAnnotationPresent(Excel.class)) {
             this.excelAnno = dataCls.getAnnotation(Excel.class);
+        }else{
+            this.excelAnno = EmptyExcelAnno.class.getAnnotation(Excel.class);
         }
+    }
+
+    @Excel(name = "")
+    interface EmptyExcelAnno{
+
     }
 
 }
