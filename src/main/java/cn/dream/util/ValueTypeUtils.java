@@ -1,5 +1,6 @@
 package cn.dream.util;
 
+import cn.dream.excep.InvalidArgumentException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.ConversionService;
@@ -34,7 +35,7 @@ public class ValueTypeUtils {
         if(conversionService.canConvert(value.getClass(),targetType)){
             return conversionService.convert(value,targetType);
         }
-        throw new RuntimeException(String.format("不支持的类型转换: %s -> %s",value.getClass(),targetType));
+        throw new InvalidArgumentException(String.format("不支持的类型转换: %s -> %s",value.getClass(),targetType));
     }
 
 }

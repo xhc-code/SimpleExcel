@@ -1,6 +1,7 @@
 package cn.dream.anno.handler.excelfield;
 
 import cn.dream.enu.HandlerTypeEnum;
+import cn.dream.excep.InvalidArgumentException;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -19,7 +20,7 @@ public class DefaultExcelFieldStyleAnnoHandler {
 		}else if(handlerTypeEnum == HandlerTypeEnum.BODY){
 			setBodyCellStyle(target,value);
 		}else{
-			throw new RuntimeException("无效设置单元格样式的Type类型");
+			throw new InvalidArgumentException("无效设置单元格样式的Type类型");
 		}
 	}
 

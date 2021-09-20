@@ -1,6 +1,7 @@
 package cn.dream.anno.handler.excelfield;
 
 
+import cn.dream.excep.InvalidArgumentException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 
@@ -87,7 +88,7 @@ public class DefaultConverterValueAnnoHandler {
 		for (String item : split) {
 			String s = dictDataMap.get(item);
 			if(StringUtils.isEmpty(s)){
-				throw new RuntimeException(String.format("找不到Key为 %s 的字典项",item));
+				throw new InvalidArgumentException(String.format("找不到Key为 %s 的字典项",item));
 			}
 			stringBuilder.append(s).append(DELIMITER);
 		}
