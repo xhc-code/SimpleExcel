@@ -63,8 +63,6 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
         int dataFirstRowIndex = clsExcel.dataFirstRowIndex();
 
-
-
         int firstRowNum = getSheet().getFirstRowNum();
         int lastRowNum = getSheet().getLastRowNum();
 
