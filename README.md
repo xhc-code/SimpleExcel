@@ -1,7 +1,7 @@
 # SimpleExcel
 方便操作Excel,可同时对多Sheet进行操作,多个Excel对象的Sheet之前的操作是隔离的(需要使用者保证操作WordBook时必须是串行化的)
 
-> 期望此工具是Excel工具中最好用的
+> Excel简化操作的工具,基于Apache的POI进行包装开发
 
 # 支持的功能点
 * 基于Excel文件，复制单元格行
