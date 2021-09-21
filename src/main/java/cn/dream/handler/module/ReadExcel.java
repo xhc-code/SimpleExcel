@@ -9,6 +9,7 @@ import cn.dream.handler.bo.SheetData;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.ValueTypeUtils;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -25,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class ReadExcel extends AbstractExcel<ReadExcel> {
 
 
@@ -52,11 +54,15 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         super.setSheetData(dataCls, dataList);
     }
 
-    public void write(File outputFile) throws IOException {
+    public File write(File outputFile) throws IOException {
         throw new ActionNotSupportedException("此操作不被支持");
     }
 
-    public void readData() throws IllegalAccessException {
+    /**
+     * 读取Sheet中的数据
+     * @throws IllegalAccessException
+     */
+    public void readData() {
         SheetData sheetData = getSheetData();
 
         Excel clsExcel = sheetData.getExcelAnno();
@@ -114,7 +120,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      * @param rowIndex
      * @throws IllegalAccessException
      */
-    public void putBodyDataByLocation(int rowIndex) throws IllegalAccessException {
+    public void putBodyDataByLocation(int rowIndex) {
 
         SheetData sheetData = getSheetData();
 
@@ -185,6 +191,11 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 if(!dictDataMap.isEmpty()){
                     // 反转Map，用于从 Excel读取值并转换值
                     dictDataMap = defaultConverterValueAnnoHandler.reverse(dictDataMap);
+
+                    /**
+                     * 这里会有一个可能性
+                     *    当未成功转换值写入到Excel中，再读取时，值会为从getCellValueAsdouble类型读出，值会为 0.0这种格式的，这不是逻辑代码的问题，思考为什么会转换不成功呢？
+                     */
                     AtomicReference<Object> valueAtomicReference=new AtomicReference<>(cellValue);
                     if(fieldAnnotation.enableConverterMultiValue()){
                         defaultConverterValueAnnoHandler.multiMapping(dictDataMap,new AtomicReference<>(fieldType),valueAtomicReference);
@@ -204,7 +215,11 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 }
             }
 
-            field.set(newInstance,cellValue);
+            try {
+                field.set(newInstance,cellValue);
+            } catch (IllegalAccessException e) {
+                log.warn("非法访问 {} 字段;错误信息: {}",field.getName(),e.getMessage());
+            }
 
             /**
              * 写入和读取都需要设置数据的格式，看看 defaultFormatter怎么样集成最为合适吧
@@ -339,7 +354,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      */
     @Override
     public void flushData() {
-        writeData(getSheet());
+        throw new ActionNotSupportedException("此操作不被支持");
     }
 
     public static ReadExcel newInstance(Workbook workbook) {

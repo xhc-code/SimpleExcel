@@ -71,7 +71,9 @@ public class DefaultConverterValueAnnoHandler {
 	 */
 	public void simpleMapping(Map<String,String> dictDataMap,final AtomicReference<Class<?>> javaTypeCls,AtomicReference<Object> value){
 		String s = dictDataMap.get(value.get().toString());
-		value.set(s);
+		if(StringUtils.isNotEmpty(s)){
+			value.set(s);
+		}
 	}
 
 	/**

@@ -145,6 +145,34 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             }
     };
 
+
+    private static final Map<Class<?>,ISetCellValue> SET_CELL_VALUE_MAP = new HashMap<>();
+
+    static {
+
+        SET_CELL_VALUE_MAP.put(Boolean.class,JAVA_TYPE_SET_CELL_VALUE[0]);
+        SET_CELL_VALUE_MAP.put(Byte.class,JAVA_TYPE_SET_CELL_VALUE[1]);
+        SET_CELL_VALUE_MAP.put(Short.class,JAVA_TYPE_SET_CELL_VALUE[2]);
+        SET_CELL_VALUE_MAP.put(Integer.class,JAVA_TYPE_SET_CELL_VALUE[3]);
+        SET_CELL_VALUE_MAP.put(Long.class,JAVA_TYPE_SET_CELL_VALUE[4]);
+        SET_CELL_VALUE_MAP.put(Float.class,JAVA_TYPE_SET_CELL_VALUE[5]);
+        SET_CELL_VALUE_MAP.put(Double.class,JAVA_TYPE_SET_CELL_VALUE[6]);
+        SET_CELL_VALUE_MAP.put(Character.class,JAVA_TYPE_SET_CELL_VALUE[7]);
+        SET_CELL_VALUE_MAP.put(String.class,JAVA_TYPE_SET_CELL_VALUE[7]);
+        SET_CELL_VALUE_MAP.put(Date.class,JAVA_TYPE_SET_CELL_VALUE[8]);
+        SET_CELL_VALUE_MAP.put(Calendar.class,JAVA_TYPE_SET_CELL_VALUE[9]);
+
+    }
+
+    /**
+     * 获取设置值单元格的处理程序
+     * @param javaType
+     * @return
+     */
+    protected static ISetCellValue getSetValueCell(Class<?> javaType){
+        return SET_CELL_VALUE_MAP.get(javaType);
+    }
+
     /**
      * Java类型对应的映射到单元格类型的数组
      */
@@ -183,36 +211,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         Validate.isInstanceOf(AbstractExcel.class,o);
         ReflectionUtils.setFieldValue(ReflectionUtils.getFieldByFieldName(o,"transfer").get(),o,true);
     }
-
-    /**
-     * 从Java类型转换为合适的单元格类型
-     *
-     * @param javaType Java类型
-     */
-    protected static CellType[] javaTypeToCellType(Class<?> javaType) {
-        int javaTypeIndex = javaTypeIndex(javaType);
-        if (javaTypeIndex != -1) {
-            Short[] mappingCellTypes = JAVA_TYPE_MAPPING_CELL_TYPES[javaTypeIndex];
-            CellType[] cellTypes = new CellType[mappingCellTypes.length];
-            for (int j = 0; j < mappingCellTypes.length; j++) {
-                cellTypes[j] = CELL_TYPES[mappingCellTypes[j]];
-            }
-            return cellTypes;
-        }
-        return EMPTY_CELL_TYPES;
-    }
-
-    protected static int javaTypeIndex(Class<?> javaType) {
-        Validate.isTrue(javaType.getName().contains("."), "请将实体类的基本类型修改为包装类型;出问题的类型：%s",javaType.getName() );
-        for (int i = 0; i < JAVA_TYPE_MAPPING_CELL_TYPES.length; i++) {
-            if (JAVA_TYPES[i] == javaType) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-
 
     /* ===========                  实例字段                       =========================  */
 
@@ -567,9 +565,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param value     值
      */
     protected void setCellValue(Cell cell, Class<?> valueType, Object value) {
-        int javaTypeIndex = javaTypeIndex(valueType);
+        ISetCellValue iSetCellValue = getSetValueCell(valueType);
         try {
-            ISetCellValue iSetCellValue = JAVA_TYPE_SET_CELL_VALUE[javaTypeIndex];
+            if(iSetCellValue == null){
+                throw new RuntimeException(String.format("无法获取到 %s 类型的Cell设置器", valueType.getName()));
+            }
+
             Object convertValue = value;
             if(ObjectUtils.isNotEmpty(value)){
                 try {
@@ -779,9 +780,10 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * 通过 newInstance 进行实例化的调用此方法
      * @param outputFile
      * @throws IOException
+     * @return
      */
-    public void write(File outputFile) throws IOException {
-        write(getWorkbook(),getSheet(),outputFile);
+    public File write(File outputFile) throws IOException {
+        return write(getWorkbook(),getSheet(),outputFile);
     }
 
     /**
@@ -789,9 +791,10 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param workbook WorkBook工作簿对象
      * @param sheet Sheet对象
      * @param outputFile 写出的File文件目录
+     * @return 返回写出的文件全路径
      * @throws IOException
      */
-    protected void write(Workbook workbook, Sheet sheet, File outputFile) throws IOException {
+    protected File write(Workbook workbook, Sheet sheet, File outputFile) throws IOException {
         Validate.isTrue(!this.transfer,"转换对象不能操作此方法写入数据,请通过flushData进行写入数据");
         Validate.isTrue(!this.embeddedObject,"嵌入对象不能操作Write方法");
 
@@ -822,6 +825,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         } finally {
             workbook.close();
         }
+        return outputFile;
     }
 
 

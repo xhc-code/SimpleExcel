@@ -339,9 +339,10 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
 
 
     @Override
-    public void write(File outputFile) throws IOException {
+    public File write(File outputFile) throws IOException {
         Validate.isTrue(!transfer,"不能调用此方法,请 调用 write() 方法写入数据");
         super.write(outputFile);
+        return outputFile;
     }
 
     /**
