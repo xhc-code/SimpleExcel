@@ -4,6 +4,7 @@ import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
 import cn.dream.anno.MergeField;
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
+import cn.dream.excep.UnknownValueException;
 import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
@@ -153,6 +154,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     /* ======          实例字段  ======================*/
 
+    /**
+     * Wordbook的默认样式对象，主要用来给 {@link #globalCellStyle} 进行赋默认值
+     */
     private CellStyle defaultCellStyle;
 
     /**
@@ -160,10 +164,13 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected CellStyle globalCellStyle;
 
+    /**
+     * 处理的Sheet对象
+     */
     protected Sheet sheet;
 
     /**
-     * 当前对象是否是通过其他Excel转换而来；true是，false是通过本地实例的
+     * 当前对象是否是通过其他Excel对象转换而来；true是，false是通过本地实例的;参阅 {@link cn.dream.handler.module.WriteExcel#newCopyExcel(Workbook)}
      */
     protected boolean transfer = false;
 
@@ -210,7 +217,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     /* ===========                  实例字段                       =========================  */
 
     /**
-     * 内嵌对象
+     * 内嵌对象,例如：使用newSheetName返回的Sheet对象，则此对象为true;参阅 {@link cn.dream.handler.module.WriteExcel#newSheet(String)}
      */
     protected boolean embeddedObject = false;
 
@@ -363,7 +370,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     public SheetData getSheetData(){
-        Validate.notNull(this.sheetData,"SheetData未设置,请通过 setSheetData 进行设置数据项");
+        if(this.sheetData == null){
+            throw new UnknownValueException("SheetData未设置,请通过 setSheetData 进行设置数据项");
+        }
         return this.sheetData;
     }
 
@@ -373,7 +382,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected List<Field> getFields() {
-        return this.sheetData.getFieldList();
+        return Optional.ofNullable(getSheetData().getFieldList()).orElse(Collections.emptyList());
     }
 
     /**
@@ -795,7 +804,13 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         /**
          * 生成导出的Excel文件的名称
          */
-        Excel excelAnno = getSheetData().getExcelAnno();
+        Excel excelAnno = null;
+        try {
+            excelAnno = getSheetData().getExcelAnno();
+        } catch (UnknownValueException unknownValueException) {
+            excelAnno = SheetData.getDefault().getExcelAnno();
+        }
+
         DefaultExcelNameAnnoHandler defaultExcelNameAnnoHandler = ReflectionUtils.newInstance(excelAnno.handlerName());
         String excelName = defaultExcelNameAnnoHandler.getName(excelAnno.name());
         outputFile = new File(outputFile,excelName.concat(".").concat(excelAnno.extendFileType().getValue()));

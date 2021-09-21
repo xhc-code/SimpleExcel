@@ -162,7 +162,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                         DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
                         List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(fieldAnnotation.selectValues());
                         List<String> selectValueListAnnoHandlerSelectValues = defaultSelectValueListAnnoHandler.getSelectValues(parseExpression);
-                        SheetData sheetData = this.sheetData;
+                        SheetData sheetData = getSheetData();
                         return RecordDataValidator.builder()
                                 .selectedItems(selectValueListAnnoHandlerSelectValues.toArray(TYPE_STRINGS))
                                 .handlerTypeEnum(handlerTypeEnum)
