@@ -5,6 +5,7 @@ import cn.dream.handler.module.WriteExcel;
 import cn.dream.test.entity.StudentInfoEntity;
 import cn.dream.util.DateUtils;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +23,7 @@ import java.util.List;
  */
 @SpringBootTest
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
-public class WriteAndReadTest {
+public class MergeWriteAndReadTest {
 
 
     private static List<StudentInfoEntity> studentTestEntityList = new ArrayList<>();
@@ -39,10 +41,10 @@ public class WriteAndReadTest {
 
         File file = classPathResource.getFile();
 
-        file = new File(file, WriteAndReadTest.class.getSimpleName());
+        file = new File(file, MergeWriteAndReadTest.class.getSimpleName());
         boolean mkdirDire = !file.exists() && file.mkdirs();
 
-        writeOutputFile = new File(file, "writeExcel结果.xlsx");
+        writeOutputFile = new File(file, MergeWriteAndReadTest.class.getSimpleName());
 
         writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
 
@@ -100,13 +102,32 @@ public class WriteAndReadTest {
 
     @Test
     @Order(0)
-    public void write(){
+    public void write() throws ParseException {
 
-        writeExcel.createSheet("我是一个测试write的Sheet");
+        writeExcel.createSheet("我是一个测试MergeWrite的Sheet");
 
         writeExcel.setSheetData(StudentInfoEntity.class,studentTestEntityList);
 
-        writeExcel.generateHeader();
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle, setMergeCell) -> {
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,2,0,0),"用户UID");
+
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,0,1,4),"基本信息");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,1,1),"用户名称");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,2,2),"用户年龄");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,3,3),"用户性别");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,4,4),"生日日期");
+
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,0,5,9),"其他信息");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,5,5),"记录日期");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,6,6),"创建ID");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,7,7),"创建名称");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,8,8),"审核状态");
+            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,9,9),"是否公开");
+
+
+
+
+        });
 
         writeExcel.generateBody();
     }
@@ -134,6 +155,25 @@ public class WriteAndReadTest {
         result.forEach(System.err::println);
 
     }
+
+
+    public void mergeWrite(){
+
+
+
+
+    }
+
+
+    public void mergeRead(){
+
+    }
+
+    /* Excel写入，读取 */
+
+    /* 合并Excel写入，读取*/
+
+
 
 
     /**

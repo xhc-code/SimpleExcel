@@ -12,6 +12,7 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -77,11 +78,11 @@ public class CustomizeCellTest {
     }
 
     @Test
-    public void test(){
+    public void test() throws ParseException {
 
         writeExcel.createSheet("我是Sheet恶魔");
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,setMergeCell) -> {
             Row row = sheet.createRow(3);
             Cell cell = row.createCell(2);
             cell.setCellValue("我是魔鬼哦");

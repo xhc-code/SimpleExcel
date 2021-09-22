@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.WorkbookUtil;
@@ -89,13 +90,17 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
                 finalValue = dateTimeInstance.format((Date)value);
 //                ExcelField localThreadExcelField = getLocalThreadExcelField();
 //                finalValue = DateUtils.formatDate((Date)value,localThreadExcelField.dateFormat());
-                cellConsumer.accept(cell);
+                if(cellConsumer != null){
+                    cellConsumer.accept(cell);
+                }
             }else if(value instanceof Calendar){
                 DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
                 finalValue = dateTimeInstance.format(((Calendar) value).getTime());
 //                ExcelField localThreadExcelField = getLocalThreadExcelField();
 //                finalValue = DateUtils.formatDate(Date.from(((Calendar) value).toInstant()),localThreadExcelField.dateFormat());
-                cellConsumer.accept(cell);
+                if(cellConsumer != null){
+                    cellConsumer.accept(cell);
+                }
             }else {
                 finalValue = value.toString();
             }
@@ -732,6 +737,38 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         return value;
     }
 
+    protected boolean writeCellValue(CellRangeAddress cellAddresses,Object value) throws ParseException {
+        return writeCellValue(getSheet(),cellAddresses,value);
+    }
+
+    protected boolean writeCellValue(Sheet sheet,CellRangeAddress cellAddresses,Object value) throws ParseException {
+        int i = -1;
+        try {
+            i = sheet.addMergedRegion(cellAddresses);
+
+            // 首行首列不存在，则进行创建
+            Row rowIfNotExists = createRowIfNotExists(sheet, cellAddresses.getFirstRow());
+            createCellIfNotExists(rowIfNotExists,cellAddresses.getFirstColumn());
+
+            // 获取合并单元格范围中的首个单元格进行设置值
+            Cell firstCell = getFirstCell(sheet, cellAddresses);
+            ISetCellValue setValueCell = getSetValueCell(value.getClass());
+            setValueCell.setValue(firstCell,value,null);
+
+            // 将合并单元格中的行和列的单元格对象统统创建出来
+            for (CellAddress cellAddress : cellAddresses) {
+                Row row = createRowIfNotExists(sheet, cellAddress.getRow());
+                createCellIfNotExists(row,cellAddress.getColumn());
+            }
+        } catch (ParseException e) {
+            /**
+             * 当出现异常时，移除对应的合并区域
+             */
+            sheet.removeMergedRegion(i);
+            throw e;
+        }
+        return true;
+    }
 
     /**
      * 将临时的集合记录数据，更改写入到WorkBook中

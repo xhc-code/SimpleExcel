@@ -13,6 +13,7 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 
 @SpringBootTest
 public class CopyExcelTest {
@@ -81,12 +82,12 @@ public class CopyExcelTest {
 
 
     @Test
-    public void test3(){
+    public void test3() throws ParseException {
 
         WriteExcel writeExcel = copyExcel.newWriteExcel();
         writeExcel.createSheet("我是copy里的写入的");
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,setMergeCell) -> {
 
             Row row = sheet.createRow(1);
             Cell cell = row.createCell(1);

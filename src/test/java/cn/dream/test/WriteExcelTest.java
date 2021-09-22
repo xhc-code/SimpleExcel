@@ -14,6 +14,7 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -100,10 +101,10 @@ public class WriteExcelTest {
      * 测试创建Sheet是否有问题
      */
     @Test
-    public void test2(){
+    public void test2() throws ParseException {
         WriteExcel writeExcel = WriteExcelTest.writeExcel.newSheet("我是年纪");
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle) -> {
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,setMergeCell) -> {
 
             /**
              * 此CellStyle对象可自行缓存下来，重复使用，在通过putCellStyle时，会自行缓存并返回修改过的CellStyle对象

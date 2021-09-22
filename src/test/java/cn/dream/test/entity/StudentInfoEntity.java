@@ -14,7 +14,7 @@ import java.util.Date;
  */
 @Getter
 @Setter
-@Excel(name = "test")
+@Excel(name = "test",byHeaderName = true,headerRowRangeIndex = {1,2})
 @ToString
 public class StudentInfoEntity {
 
@@ -39,7 +39,7 @@ public class StudentInfoEntity {
     @ExcelField(name = "创建ID")
     private Integer createBy;
 
-    @ExcelField(name = "创建名称")
+    @ExcelField(name = "创建名称",mergeCell = true)
     private String createName;
 
     @ExcelField(name = "审核状态",converterValueExpression = "1=编辑,2=审核中,3=审核成功,4=审核失败")

@@ -3,8 +3,6 @@ package cn.dream.anno.handler.excelfield;
 import cn.dream.enu.HandlerTypeEnum;
 import cn.dream.excep.InvalidArgumentException;
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.IndexedColors;
 
 public class DefaultExcelFieldStyleAnnoHandler {
 
@@ -24,14 +22,26 @@ public class DefaultExcelFieldStyleAnnoHandler {
 		}
 	}
 
+	/**
+	 * 设置Header表头的单元格的样式
+	 * 例：target.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+	 * 		target.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	 * @param target
+	 */
 	protected void setHeaderCellStyle(CellStyle target){
-		target.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-		target.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
 	}
 
+	/**
+	 * 设置Body数据项的单元格的样式
+	 *
+	 * 例：target.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
+	 * 		target.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	 * @param target
+	 * @param value
+	 */
 	protected void setBodyCellStyle(CellStyle target,Object value) {
-		target.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
-		target.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
 	}
 
 }

@@ -273,7 +273,7 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         /**
          * 处理设置单元格样式
          * @param pointData 数据点信息对象
-         * @param cellStyle 全局的样式，可以将样式设置到此对象,自动进行缓存
+         * @param cellStyle 全局的样式，可以将样式设置到此对象,自动进行缓存和应用到当前Cell单元格
          */
         void doHandlerCellStyle(PointData pointData,CellStyle cellStyle);
 

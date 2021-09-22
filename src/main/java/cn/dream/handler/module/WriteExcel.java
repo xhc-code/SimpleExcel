@@ -22,6 +22,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -112,9 +113,15 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * 自定义处理单元格
      * @param iCustomizeCell
      */
-    public void handlerCustomizeCellItem(ICustomizeCell iCustomizeCell) {
+    public void handlerCustomizeCellItem(ICustomizeCell iCustomizeCell) throws ParseException {
         Validate.notNull(getSheet(),"请设置Sheet对象");
-        iCustomizeCell.customize(getWorkbook(),getSheet(), cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle));
+        iCustomizeCell.customize(getWorkbook(),getSheet(),
+                cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle),
+                this::writeCellValue
+        );
+
+
+
     }
 
 
@@ -212,7 +219,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                 // 这里判断处理的类型是不是 BODY阶段，否则，o参数是为null，取不到值的，相应的默认值也不进行赋值；原因是 HEADER和FOOTER(未来可能存在)是针对注解本身的值进行操作的
                 if(HandlerTypeEnum.BODY == handlerTypeEnum){
                     valueAtomicReference.compareAndSet(null,field.get(o));
-                    if(StringUtils.isNotEmpty(fieldAnnotation.defaultValue())){
+                    if(StringUtils.isNotBlank(fieldAnnotation.defaultValue())){
                         valueAtomicReference.compareAndSet(null,fieldAnnotation.defaultValue());
                     }
 

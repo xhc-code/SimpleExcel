@@ -82,6 +82,8 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             int firstLastRowIndex = Math.max(0, ObjectUtils.anyNotNull(cellRangeAddress) ? (cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()): 0);
 
             headerRowRangeIndex = new int[] {firstRowNum,firstRowNum + firstLastRowIndex};
+        } else if(headerRowRangeIndex.length != 2){
+            throw new IllegalArgumentException(String.format("非法参数值: %s", Arrays.toString(headerRowRangeIndex)));
         }
 
         // 校验数据首行是否在表头的范围
@@ -135,7 +137,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         if(byHeaderName){
             fieldMap = fieldList.stream().collect(Collectors.toMap(field -> {
                 ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
-                return Optional.ofNullable(fieldAnnotation.validateHeaderName()).orElse(fieldAnnotation.name());
+                return StringUtils.isNotBlank(fieldAnnotation.validateHeaderName()) ? fieldAnnotation.validateHeaderName() : fieldAnnotation.name();
             }, field -> field));
         }
 
@@ -157,7 +159,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 Validate.notNull(field, "没有找到名称为 %s 的字段对象",headerNameAsString);
                 fieldAnnotation = field.getAnnotation(ExcelField.class);
             }else{
-                Validate.isTrue( i < fieldList.size() , "当前字段集合不存在索引 %d ,请检查实体与Excel之间的映射",i);
+                Validate.isTrue( i < fieldList.size() , "当前字段集合不存在索引 %d ,请检查实体与Excel之间的映射关系是否达到一一对应的关系",i);
                 field = fieldList.get(i);
                 fieldAnnotation = field.getAnnotation(ExcelField.class);
                 if(fieldAnnotation != null && fieldAnnotation.validateHeader()){
@@ -256,25 +258,31 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             for (int rowPointer = firstHeaderRowIndex; rowPointer <= lastHeaderRowIndex; rowPointer++) {
 
                 Cell cell = sheet.getRow(rowPointer).getCell(colPointer);
-                CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
-                Object cellValue;
-                if(cellRangeAddress != null){
-                    Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
-                    cellValue = getCellValue(firstCell);
-                    rowPointer+= Math.max(0,(cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()));
+                /**
+                 * cell != null；参阅 {@link ReadExcel#getCellRangeAddress(org.apache.poi.ss.usermodel.Sheet, org.apache.poi.ss.usermodel.Cell)} 的文档注释说明
+                 */
+                if(cell != null){
+                    CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
+                    Object cellValue;
+                    if(cellRangeAddress != null){
+                        Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
+                        cellValue = getCellValue(firstCell);
+                        rowPointer+= Math.max(0,(cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()));
 
-                    headerInfoBuilder.merge(true);
-                    headerInfoBuilder.cellAddresses(cellRangeAddress);
-                    headerInfoBuilder.cell(firstCell);
-                }else {
-                    cellValue = getCellValue(cell);
+                        headerInfoBuilder.merge(true);
+                        headerInfoBuilder.cellAddresses(cellRangeAddress);
+                        headerInfoBuilder.cell(firstCell);
+                    }else {
+                        cellValue = getCellValue(cell);
 
-                    headerInfoBuilder.merge(false);
-                    headerInfoBuilder.cell(cell);
+                        headerInfoBuilder.merge(false);
+                        headerInfoBuilder.cell(cell);
+                    }
+                    if(cellValue != null){
+                        tempStr.append(cellValue);
+                    }
                 }
-                if(cellValue != null){
-                    tempStr.append(cellValue);
-                }
+
             }
 
             HeaderInfo headerInfo = headerInfoBuilder.headerName(tempStr.toString())
@@ -326,6 +334,12 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      * @return
      */
     protected CellRangeAddress getCellRangeAddress(Sheet sheet,Cell cell){
+        if(cell == null){
+            /**
+             * 当合并单元格跨列，但是下一行并没有单元格，出现cell = null的情况，将直接返回null,不进行额外的判断处理
+             */
+            return null;
+        }
         List<CellRangeAddress> mergedRegions = sheet.getMergedRegions();
         Optional<CellRangeAddress> cellAddresses = mergedRegions.stream().filter(c -> c.isInRange(cell)).findFirst();
         return cellAddresses.orElse(null);
