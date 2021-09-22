@@ -14,9 +14,9 @@ import java.util.Date;
  */
 @Getter
 @Setter
-@Excel(name = "test",byHeaderName = true)
+@Excel(name = "test",byHeaderName = true,headerRowRangeIndex = {1,2})
 @ToString
-public class StudentInfoEntity {
+public class MergeStudentInfoEntity {
 
     @ExcelField(name = "用户UID")
     private String uid;

@@ -2,7 +2,7 @@ package cn.dream.test;
 
 import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
-import cn.dream.test.entity.StudentInfoEntity;
+import cn.dream.test.entity.MergeStudentInfoEntity;
 import cn.dream.util.DateUtils;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -26,7 +26,7 @@ import java.util.List;
 public class MergeWriteAndReadTest {
 
 
-    private static List<StudentInfoEntity> studentTestEntityList = new ArrayList<>();
+    private static List<MergeStudentInfoEntity> studentTestEntityList = new ArrayList<>();
 
     private static ClassPathResource classPathResource;
 
@@ -55,7 +55,7 @@ public class MergeWriteAndReadTest {
      * 初始化数据
      */
     public static void initData(){
-        StudentInfoEntity studentTestEntity = new StudentInfoEntity();
+        MergeStudentInfoEntity studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setUserName("张三01");
         studentTestEntity.setSex('男');
@@ -69,7 +69,7 @@ public class MergeWriteAndReadTest {
         studentTestEntityList.add(studentTestEntity);
 
 
-        studentTestEntity = new StudentInfoEntity();
+        studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("002");
         studentTestEntity.setUserName("张三02");
         studentTestEntity.setSex('女');
@@ -83,7 +83,7 @@ public class MergeWriteAndReadTest {
         studentTestEntityList.add(studentTestEntity);
 
 
-        studentTestEntity = new StudentInfoEntity();
+        studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setUserName("张三01");
         studentTestEntity.setSex('男');
@@ -106,7 +106,7 @@ public class MergeWriteAndReadTest {
 
         writeExcel.createSheet("我是一个测试MergeWrite的Sheet");
 
-        writeExcel.setSheetData(StudentInfoEntity.class,studentTestEntityList);
+        writeExcel.setSheetData(MergeStudentInfoEntity.class,studentTestEntityList);
 
         writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle, setMergeCell) -> {
             setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,2,0,0),"用户UID");
@@ -146,12 +146,12 @@ public class MergeWriteAndReadTest {
 
         ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(writeOutputFile));
 
-        readExcel.setSheetDataCls(StudentInfoEntity.class);
+        readExcel.setSheetDataCls(MergeStudentInfoEntity.class);
 
         readExcel.toggleSheet(0);
         readExcel.readData();
 
-        List<StudentInfoEntity> result = readExcel.getResult();
+        List<MergeStudentInfoEntity> result = readExcel.getResult();
         result.forEach(System.err::println);
 
     }
