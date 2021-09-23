@@ -4,6 +4,7 @@ import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test.entity.StudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.*;
@@ -121,7 +122,7 @@ public class WriteAndReadTest {
 
     @Test
     @Order(2)
-    public void read() throws IOException, IllegalAccessException {
+    public void read() throws IOException, IllegalAccessException, InvalidFormatException {
 
         ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(writeOutputFile));
 

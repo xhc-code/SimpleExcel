@@ -4,6 +4,7 @@ import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test.entity.MergeStudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -142,7 +143,7 @@ public class MergeWriteAndReadTest {
 
     @Test
     @Order(2)
-    public void read() throws IOException, IllegalAccessException {
+    public void read() throws IOException, IllegalAccessException, InvalidFormatException {
 
         ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(writeOutputFile));
 

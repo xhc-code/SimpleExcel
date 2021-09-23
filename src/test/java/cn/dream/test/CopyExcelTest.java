@@ -3,6 +3,7 @@ package cn.dream.test;
 import cn.dream.handler.module.CopyExcel;
 import cn.dream.handler.module.WriteExcel;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +29,7 @@ public class CopyExcelTest {
 
 
     @BeforeAll
-    public static void init() throws IOException {
+    public static void init() throws IOException, InvalidFormatException {
         classPathResource = new ClassPathResource("template");
 
         File file = classPathResource.getFile();

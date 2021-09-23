@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.WorkbookUtil;
@@ -35,7 +34,7 @@ import java.util.stream.Collectors;
  * @param <T> 创建实例返回的对象的值
  */
 @Slf4j
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked", "deprecation"})
 public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     protected static final Field[] EMPTY_FIELDS = new Field[0];
@@ -79,7 +78,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
          */
         default void setValue(Cell cell, Object value,Consumer<Cell> cellConsumer) throws ParseException {
             if(ObjectUtils.isEmpty(value)){
-                cell.setBlank();
+                cell.setCellValue("");
                 return;
             }
             Validate.notNull(value,"不允许的单元格空值");
@@ -708,32 +707,23 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param cell 单元格对象
      */
     protected Object getCellValue(Cell cell) {
-        CellType cellType = cell.getCellType();
-
+        int cellType = cell.getCellType();
         Object value = null;
-        switch (cellType) {
-            case STRING:
-                value = cell.getRichStringCellValue().getString();
-                break;
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    value = cell.getDateCellValue();
-                } else {
-                    value = cell.getNumericCellValue();
-                }
-                break;
-            case BOOLEAN:
-                value = cell.getBooleanCellValue();
-                break;
-            case FORMULA:
-                value = cell.getCellFormula();
-                break;
-            case BLANK:
-                value = "";
-                break;
-            default:
+        if(cellType == CellType.STRING.getCode()){
+            value = cell.getRichStringCellValue().getString();
+        }else if(cellType == CellType.NUMERIC.getCode()){
+            if (DateUtil.isCellDateFormatted(cell)) {
+                value = cell.getDateCellValue();
+            } else {
+                value = cell.getNumericCellValue();
+            }
+        }else if(cellType == CellType.BOOLEAN.getCode()){
+            value = cell.getBooleanCellValue();
+        }else if(cellType == CellType.FORMULA.getCode()){
+            value = cell.getCellFormula();
+        }else if(cellType == CellType.BLANK.getCode()){
+            value = "";
         }
-
         return value;
     }
 
@@ -756,9 +746,11 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             setValueCell.setValue(firstCell,value,null);
 
             // 将合并单元格中的行和列的单元格对象统统创建出来
-            for (CellAddress cellAddress : cellAddresses) {
-                Row row = createRowIfNotExists(sheet, cellAddress.getRow());
-                createCellIfNotExists(row,cellAddress.getColumn());
+            for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
+                for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
+                    Row row = createRowIfNotExists(sheet, rowIndex);
+                    createCellIfNotExists(row,columnIndex);
+                }
             }
         } catch (ParseException e) {
             /**

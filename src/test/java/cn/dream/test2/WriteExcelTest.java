@@ -1,11 +1,12 @@
 package cn.dream.test2;
 
+import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test2.entity.StudentEntity;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 
@@ -17,6 +18,7 @@ import java.util.Date;
 import java.util.List;
 
 @SpringBootTest
+@TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 public class WriteExcelTest {
 
 
@@ -95,6 +97,7 @@ public class WriteExcelTest {
 
 
     @Test
+    @Order(0)
     public void test1() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException {
 
 
@@ -120,12 +123,34 @@ public class WriteExcelTest {
 
 
 
+    @Test
+    @Order(1)
+    public void writeComplete() throws IOException {
+        targetFile = writeExcel.write(targetFile);
+        System.out.println("准备读取----------------------------------------------");
+    }
+
+    @Test
+    @Order(2)
+    public void read() throws IOException, IllegalAccessException, InvalidFormatException {
+
+        ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(targetFile));
+
+        readExcel.setSheetDataCls(StudentEntity.class);
+
+        readExcel.toggleSheet(0);
+        readExcel.readData();
+
+        List<StudentEntity> result = readExcel.getResult();
+        result.forEach(System.err::println);
+
+    }
 
 
     @AfterAll
     public static void afterAll() throws IOException {
 
-        writeExcel.write(targetFile);
+//        writeExcel.write(targetFile);
 
     }
 
