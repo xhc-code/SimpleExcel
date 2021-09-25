@@ -46,8 +46,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
 
         // 将首行取出，与目标Sheet的首行对比，
         int i = excelAnno.rowIndex();
-        int lastRowNum = getSheet().getLastRowNum();
-        Row row = createRowIfNotExists(getSheet(),getMaxNum(i, lastRowNum, 0));
+        int newRowNum = getNewRowNum();
+        Row row = createRowIfNotExists(getSheet(),getMaxNum(i, newRowNum, 0));
         AtomicInteger columnIndexAtomic = new AtomicInteger(getMaxNum(excelAnno.columnIndex(), row.getFirstCellNum(), 0));
         for (Field field : fields) {
 
@@ -71,15 +71,14 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         Validate.notNull(getSheet());
 
         final SheetData sheetData = getSheetData();
-
         Excel excelAnno = sheetData.getExcelAnno();
 
-        int targetLastRowIndex = getSheet().getLastRowNum() + 1;
+        int newRowNum = getNewRowNum();
 
         List<Field> fieldList = sheetData.getFieldList();
         Collection<?> dataColl = sheetData.getDataList();
 
-        AtomicInteger rowIndex = new AtomicInteger(targetLastRowIndex);
+        AtomicInteger rowIndex = new AtomicInteger(newRowNum);
         AtomicInteger columnIndex = new AtomicInteger();
         dataColl.forEach(v -> {
             columnIndex.set(0);
@@ -117,7 +116,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         Validate.notNull(getSheet(),"请设置Sheet对象");
         iCustomizeCell.customize(getWorkbook(),getSheet(),
                 cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle),
-                this::writeCellValue
+                cellHelper
         );
 
 
@@ -130,7 +129,6 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * 处理单元格的写入数据和调用针对单元格的一些额外的操作
      */
     protected void writeCellAndNoticeCls(Workbook workbook, Object o, Field field, Supplier<Cell> toCellSupplier, HandlerTypeEnum handlerTypeEnum) {
-
         Validate.notNull(handlerTypeEnum);
         Validate.notNull(field);
         Validate.notNull(toCellSupplier);
@@ -272,7 +270,6 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
     private WriteExcel(Workbook workbook){
         super();
         this.workbook = workbook;
-        initConsumerData();
     }
 
     /**
@@ -286,16 +283,16 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
     @Override
     public WriteExcel newSheet(String sheetName) {
         WriteExcel writeExcel = new WriteExcel();
-        ReflectionUtils.copyPropertiesByAnno(this,writeExcel);
-        writeExcel.initConsumerData();
-        writeExcel.createSheet(sheetName);
         writeExcel.embeddedObject = true;
+        writeExcel.createSheet(sheetName);
+        ReflectionUtils.copyPropertiesByAnno(this,writeExcel);
+        writeExcel.initConsumer();
         return writeExcel;
     }
 
     public static WriteExcel newInstance(Workbook workbook) {
         WriteExcel writeExcel = new WriteExcel(workbook);
-        writeExcel.oneInit();
+        writeExcel.initConsumer();
         return writeExcel;
     }
 

@@ -116,7 +116,7 @@ public class WriteExcelTest {
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cell.setCellStyle(putCellStyle.apply(cellStyle));
+            cell.setCellStyle(putCellStyle.cache(cellStyle));
 
         });
 

@@ -6,6 +6,7 @@ import cn.dream.anno.handler.excelfield.DefaultConverterValueAnnoHandler;
 import cn.dream.excep.ActionNotSupportedException;
 import cn.dream.handler.AbstractExcel;
 import cn.dream.handler.bo.SheetData;
+import cn.dream.handler.module.helper.CellHelper;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.ValueTypeUtils;
 import lombok.*;
@@ -265,7 +266,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                     CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
                     Object cellValue;
                     if(cellRangeAddress != null){
-                        Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
+                        Cell firstCell = CellHelper.getFirstCell(getSheet(), cellRangeAddress);
                         cellValue = getCellValue(firstCell);
                         rowPointer+= Math.max(0,(cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow()));
 
@@ -321,8 +322,6 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             return this.headerName.toString();
         }
 
-
-
     }
 
 
@@ -345,10 +344,6 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         return cellAddresses.orElse(null);
     }
 
-    private Cell cellRangeAddressToCell(Sheet sheet,CellRangeAddress cellRangeAddress){
-        return sheet.getRow(cellRangeAddress.getFirstRow()).getCell(cellRangeAddress.getFirstColumn());
-    }
-
     /**
      * 读取指定Sheet名称的Sheet对象，并返回
      * @param sheetName
@@ -356,10 +351,10 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
      */
     public ReadExcel readSheet(String sheetName) {
         ReadExcel readExcel = new ReadExcel();
-        ReflectionUtils.copyPropertiesByAnno(this,readExcel);
-        readExcel.initConsumerData();
-        readExcel.toggleSheet(sheetName);
         readExcel.embeddedObject = true;
+        readExcel.toggleSheet(sheetName);
+        ReflectionUtils.copyPropertiesByAnno(this,readExcel);
+        readExcel.initConsumer();
         return readExcel;
     }
 
@@ -373,7 +368,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
 
     public static ReadExcel newInstance(Workbook workbook) {
         ReadExcel readExcel = new ReadExcel(workbook);
-        readExcel.oneInit();
+        readExcel.initConsumer();
         return readExcel;
     }
 
@@ -382,8 +377,6 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
     private ReadExcel(Workbook workbook){
         super();
         this.workbook = workbook;
-
-        initConsumerData();
     }
 
 }

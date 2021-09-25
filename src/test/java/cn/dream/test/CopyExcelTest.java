@@ -88,7 +88,7 @@ public class CopyExcelTest {
         WriteExcel writeExcel = copyExcel.newWriteExcel();
         writeExcel.createSheet("我是copy里的写入的");
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,setMergeCell) -> {
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,cellHelper) -> {
 
             Row row = sheet.createRow(1);
             Cell cell = row.createCell(1);
@@ -97,7 +97,7 @@ public class CopyExcelTest {
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cell.setCellStyle(putCellStyle.apply(cellStyle));
+            cell.setCellStyle(putCellStyle.cache(cellStyle));
 
         });
 

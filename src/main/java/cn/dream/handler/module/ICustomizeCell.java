@@ -1,30 +1,31 @@
 package cn.dream.handler.module;
 
+import cn.dream.handler.module.helper.CellHelper;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.util.CellRangeAddress;
 
 import java.text.ParseException;
-import java.util.function.Function;
 
 @FunctionalInterface
 public interface ICustomizeCell {
 
     /**
-     * 使用Sheet定义单元格和合并单元格及样式
-     * @param workbook
-     * @param sheet
-     * @param putCellStyle 给Cell设置CellStyle对象的时候，请使用这个Lambda返回的CellStyle(已进行全局缓存样式)
-     * @param setMergeCell 设置合并单元格的时候的便携方法
+     * 自定义处理Sheet单元格对象
+     *
+     * 如果要使用 {@code workbook.createCellStyle()} 之类创建对象，请尽可能留存实例，以进行复用，可通过cacheStyle进行缓存并返回cloneFrom你创建的CellStyle可用的CellStyle对象
+     * @param workbook 工作簿对象
+     * @param sheet Sheet对象，后续的操作都是基于此Sheet对象上进行操作的
+     * @param cacheStyle 缓存工作簿创建的CellStyle对象，可以重用之前通过Workbook创建的CellStyle对象
+     * @param cellHelper 基于Sheet实例提供的操作单元格的帮助工具
      */
-    void customize(Workbook workbook, Sheet sheet, Function<CellStyle,CellStyle> putCellStyle,IAddMergeRegionCell setMergeCell) throws ParseException;
+    void customize(Workbook workbook, Sheet sheet, WorkbookCacheStyle cacheStyle, CellHelper cellHelper) throws ParseException;
 
 
     @FunctionalInterface
-    interface IAddMergeRegionCell {
+    interface WorkbookCacheStyle {
 
-        boolean setMergeCell(Sheet sheet, CellRangeAddress cellRangeAddress, Object value) throws ParseException;
+        CellStyle cache(CellStyle cellStyle);
 
     }
 
