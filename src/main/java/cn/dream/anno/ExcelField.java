@@ -32,8 +32,14 @@ public @interface ExcelField {
 	 * @return true标识需要验证标题头，false不验证
 	 */
 	boolean validateHeader() default false ;
-	
-	/**[导出和导入时生效]
+
+	/**[导出时生效]
+	 * 选择值来自值表达式；@{@link #converterValueExpression()} 的value部分
+	 * @return
+	 */
+	boolean buildSelectValuesFromValueExpression() default true;
+
+	/**[导出时生效]
 	 * Excel可选择的值列表,多个值以逗号分割，Excel中只能单值验证
 	 * @return
 	 */

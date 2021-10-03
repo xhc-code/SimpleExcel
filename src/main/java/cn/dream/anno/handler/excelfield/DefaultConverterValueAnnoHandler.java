@@ -31,7 +31,7 @@ public class DefaultConverterValueAnnoHandler {
 		String[] split = expression.split(",");
 		for (String item : split) {
 			String[] split1 = item.split("=");
-			Validate.isTrue(split1.length == 2,"转换值表达式格式错误;");
+			Validate.isTrue(split1.length == 2, String.format("转换值表达式格式错误;预期格式:Key=Value,实际为:%s", item));
 
 			objectObjectHashMap.put(split1[0],split1[1]);
 		}

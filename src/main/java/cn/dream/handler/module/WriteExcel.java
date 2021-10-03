@@ -22,7 +22,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import java.lang.reflect.Field;
-import java.text.ParseException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -112,11 +111,11 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
      * 自定义处理单元格
      * @param iCustomizeCell
      */
-    public void handlerCustomizeCellItem(ICustomizeCell iCustomizeCell) throws ParseException {
+    public void handlerCustomizeCellItem(ICustomizeCell iCustomizeCell) {
         Validate.notNull(getSheet(),"请设置Sheet对象");
         iCustomizeCell.customize(getWorkbook(),getSheet(),
                 cellStyle -> this.createCellStyleIfNotExists(getWorkbook(),cellStyle),
-                cellHelper
+                cellHelperSupplier.get()
         );
 
 
@@ -166,6 +165,16 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                         Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = fieldAnnotation.selectValueListCls();
                         DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
                         List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(fieldAnnotation.selectValues());
+
+                        // 是否需要转换值表达式生成对应的下拉框值
+                        if(fieldAnnotation.buildSelectValuesFromValueExpression()){
+                            Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                            DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
+                            Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                            defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
+                            parseExpression.addAll(dictDataMap.values());
+                        }
+
                         List<String> selectValueListAnnoHandlerSelectValues = defaultSelectValueListAnnoHandler.getSelectValues(parseExpression);
                         SheetData sheetData = getSheetData();
                         return RecordDataValidator.builder()

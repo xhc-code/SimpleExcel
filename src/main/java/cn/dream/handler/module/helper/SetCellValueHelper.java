@@ -1,5 +1,6 @@
 package cn.dream.handler.module.helper;
 
+import cn.dream.excep.ValueParseException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
@@ -30,7 +31,7 @@ public class SetCellValueHelper {
          * @param cellConsumer 消费者处理，发挥你的想象力
          * @throws ParseException
          */
-        default void setValue(Cell cell, Object value, Consumer<Cell> cellConsumer) throws ParseException {
+        default void setValue(Cell cell, Object value, Consumer<Cell> cellConsumer) throws ValueParseException {
             if(ObjectUtils.isEmpty(value)){
                 cell.setCellValue("");
                 return;
@@ -57,7 +58,13 @@ public class SetCellValueHelper {
             }else {
                 finalValue = value.toString();
             }
-            _setValue(cell, finalValue);
+            try {
+                _setValue(cell, finalValue);
+            } catch (ParseException e) {
+                ValueParseException valueParseException = new ValueParseException(e.getMessage());
+                valueParseException.addSuppressed(e);
+                throw valueParseException;
+            }
         }
 
         void _setValue(Cell cell, String value) throws ParseException;

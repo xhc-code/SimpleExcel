@@ -4,6 +4,7 @@ import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
 import cn.dream.anno.MergeField;
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
+import cn.dream.excep.NotFoundSetCellHandlerException;
 import cn.dream.excep.UnknownValueException;
 import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
@@ -25,9 +26,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.text.ParseException;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -92,14 +93,9 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     protected Sheet sheet;
 
     /**
-     * 单元格操作帮助工具
+     * 单元格操作帮助工具；延迟对象，在需要的时候获取对象；
      */
-    protected CellHelper cellHelper;
-
-    /**
-     * 单元格设置值帮助工具
-     */
-    protected SetCellValueHelper setCellValueHelper;
+    protected Supplier<CellHelper> cellHelperSupplier;
 
     /**
      * 当前对象是否是通过其他Excel对象转换而来；true是，false是通过本地实例的;参阅 {@link cn.dream.handler.module.WriteExcel#newCopyExcel(Workbook)}
@@ -187,8 +183,8 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             c.defaultCellStyle = Optional.ofNullable(c.defaultCellStyle).orElse(workbook.createCellStyle());
             c.globalCellStyle = Optional.ofNullable(c.globalCellStyle).orElse(workbook.createCellStyle());
 
-            c.cellHelper = new CellHelper(c.getSheet());
-            c.setCellValueHelper = new SetCellValueHelper();
+            // 延迟获取对象
+            c.cellHelperSupplier = () -> new CellHelper(c.getSheet());
 
         });
 
@@ -507,40 +503,35 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         SetCellValueHelper.ISetCellValue iSetCellValue = SetCellValueHelper.getSetValueCell(valueType);
         try {
             if(iSetCellValue == null){
-                throw new RuntimeException(String.format("无法获取到 %s 类型的Cell设置器", valueType.getName()));
+                throw new NotFoundSetCellHandlerException(String.format("无法获取到 %s 类型的Cell设置器", valueType.getName()));
             }
+
+            // 设置当前处理的注解到上下文中
+            setLocalThreadExcelField(currentHandlerFieldAnno);
 
             Object convertValue = value;
             if(ObjectUtils.isNotEmpty(value)){
-                try {
-                    setLocalThreadExcelField(currentHandlerFieldAnno);
                     convertValue = ValueTypeUtils.convertValueType(value, valueType);
-                }finally {
-                    clearLocalThreadExcelField();
+            }
+
+            iSetCellValue.setValue(cell, convertValue,(c -> {
+
+                /**
+                 * currentHandlerFieldAnno 此实例字段只有在写入Excel时，才会有值
+                 */
+                if(currentHandlerFieldAnno != null){
+                    CellStyle cellStyle = getGlobalCellStyle(c.getCellStyle());
+                    CreationHelper creationHelper = getWorkbook().getCreationHelper();
+                    cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat(currentHandlerFieldAnno.dateFormat()));
+                    c.setCellStyle(createCellStyleIfNotExists(cellStyle));
                 }
-            }
-            try {
-                setLocalThreadExcelField(currentHandlerFieldAnno);
-                iSetCellValue.setValue(cell, convertValue,(c -> {
 
-                    /**
-                     * currentHandlerFieldAnno 此实例字段只有在写入Excel时，才会有值
-                     */
-                    if(currentHandlerFieldAnno != null){
-                        CellStyle cellStyle = getGlobalCellStyle(c.getCellStyle());
-                        CreationHelper creationHelper = getWorkbook().getCreationHelper();
-                        cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat(currentHandlerFieldAnno.dateFormat()));
-                        c.setCellStyle(createCellStyleIfNotExists(cellStyle));
-                    }
-
-                }));
-            }finally {
-                clearLocalThreadExcelField();
-            }
-
-        } catch (ParseException e) {
-            e.printStackTrace();
+            }));
+        }finally {
+            // 清除上下文
+            clearLocalThreadExcelField();
         }
+
     }
 
     protected Row createRowIfNotExists(Sheet sheet, int rowIndex) {

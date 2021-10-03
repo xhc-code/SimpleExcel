@@ -1,13 +1,13 @@
 package cn.dream.handler.module.helper;
 
+import cn.dream.excep.ValueParseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
-
-import java.text.ParseException;
 
 /**
  * 单元格工具，Cell工具类
@@ -23,27 +23,55 @@ public class CellHelper {
      */
     private final Sheet sheet;
 
-    public void writeCellValue(Cell cell,Object value) throws ParseException {
+    /**
+     * 写入单元格只值
+     * @param cell 单元格对象
+     * @param value 值
+     * @throws ValueParseException
+     */
+    public void writeCellValue(Cell cell,Object value) throws ValueParseException {
         SetCellValueHelper.ISetCellValue setValueCell = SetCellValueHelper.getSetValueCell(value.getClass());
         setValueCell.setValue(cell,value,null);
     }
 
-    public void writeCellValue(CellRangeAddress cellAddresses, Object value) {
+    /**
+     * 写入合并单元格值
+     * @param cellAddresses 合并单元格
+     * @param value 值
+     */
+    public void writeCellValue(CellRangeAddress cellAddresses, Object value) throws ValueParseException {
         writeCellValue(this.sheet,cellAddresses,value);
     }
 
+    public void setCellStyle(CellRangeAddress cellAddresses, CellStyle cellStyle) {
+        setCellStyle(this.sheet,cellAddresses,cellStyle);
+    }
 
+    /**
+     * 如果指定行不存在，则进行创建
+     * @param rowIndex 行索引,起始为0
+     * @return
+     */
     public Row createRowIfNotExists(int rowIndex) {
         return createRowIfNotExists(this.sheet,rowIndex);
     }
 
+    /**
+     * 获取合并单元格的起始单元格
+     * @param cellAddresses
+     * @return
+     */
     public Cell getFirstCell(CellRangeAddress cellAddresses) {
         return getCell(cellAddresses.getFirstRow(), cellAddresses.getFirstColumn());
     }
-    public Cell getFirstCell(Cell cell) {
-        return getCell(cell.getRowIndex(),cell.getColumnIndex());
-    }
 
+
+    /**
+     * 获取指定行和列的单元格对象
+     * @param row 行索引
+     * @param col 列索引
+     * @return
+     */
     public Cell getCell(int row, int col) {
         return sheet.getRow(row).getCell(col);
     }
@@ -55,38 +83,44 @@ public class CellHelper {
      * @param value 合并单元格的值
      * @return
      */
-    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) {
-        int mergedRegionId = -1;
-        try {
-            // 将合并单元格中的行和列的单元格对象统统创建出来
-            for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
-                for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
-                    Row row = createRowIfNotExists(sheet,rowIndex);
-                    createCellIfNotExists(row,columnIndex);
-                }
+    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) throws ValueParseException {
+        // 将合并单元格中的行和列的单元格对象统统创建出来
+        for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
+            Row row = createRowIfNotExists(sheet,rowIndex);
+            for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
+                createCellIfNotExists(row,columnIndex);
             }
+        }
 
-            // 首行首列不存在，则进行创建
-            Row rowIfNotExists = createRowIfNotExists(sheet,cellAddresses.getFirstRow());
-            createCellIfNotExists(rowIfNotExists,cellAddresses.getFirstColumn());
+        // 获取合并单元格范围中的首个单元格进行设置值
+        Cell firstCell = getFirstCell(sheet,cellAddresses);
+        SetCellValueHelper.ISetCellValue setValueCell = SetCellValueHelper.getSetValueCell(value.getClass());
+        setValueCell.setValue(firstCell,value,null);
 
-            // 获取合并单元格范围中的首个单元格进行设置值
-            Cell firstCell = getFirstCell(sheet,cellAddresses);
-            SetCellValueHelper.ISetCellValue setValueCell = SetCellValueHelper.getSetValueCell(value.getClass());
-            setValueCell.setValue(firstCell,value,null);
+        sheet.addMergedRegion(cellAddresses);
+    }
 
-            mergedRegionId = sheet.addMergedRegion(cellAddresses);
-        } catch (ParseException e) {
-            /**
-             * 当出现异常时，移除对应的合并区域
-             */
-            if(mergedRegionId > -1){
-                sheet.removeMergedRegion(mergedRegionId);
+    /**
+     * 设置合并单元格样式
+     * @param cellAddresses 合并单元格对象
+     * @param cellStyle 单元格样式
+     */
+    public static void setCellStyle(Sheet sheet,CellRangeAddress cellAddresses, CellStyle cellStyle){
+        for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
+            Row row = createRowIfNotExists(sheet,rowIndex);
+            for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
+                Cell cellIfNotExists = createCellIfNotExists(row, columnIndex);
+                cellIfNotExists.setCellStyle(cellStyle);
             }
-            log.info("转换类型异常: {}",e.getMessage());
         }
     }
 
+    /**
+     * 如果单元格不存在则创建
+     * @param row 行对象
+     * @param columnIndex 列索引
+     * @return
+     */
     public static Cell createCellIfNotExists(Row row, int columnIndex) {
         Cell cell = row.getCell(columnIndex);
         if (cell == null) {
@@ -95,6 +129,12 @@ public class CellHelper {
         return cell;
     }
 
+    /**
+     * 如果行不存在则创建
+     * @param sheet Sheet对象
+     * @param rowIndex 行索引
+     * @return
+     */
     public static Row createRowIfNotExists(Sheet sheet, int rowIndex) {
         Row row = sheet.getRow(rowIndex);
         if (row == null) {
@@ -105,17 +145,12 @@ public class CellHelper {
 
     /**
      * 获取Sheet表里的合并单元格的第一个单元格对象
-     *
-     * @param cellAddresses
+     * @param cellAddresses 合并单元格对象
      * @return
      */
     public static Cell getFirstCell(Sheet sheet, CellRangeAddress cellAddresses) {
         return getCell(sheet,cellAddresses.getFirstRow(), cellAddresses.getFirstColumn());
     }
-    public static Cell getFirstCell(Sheet sheet, Cell cell) {
-        return getCell(sheet,cell.getRowIndex(),cell.getColumnIndex());
-    }
-
 
     /**
      * 获取指定行指定列的单元格对象

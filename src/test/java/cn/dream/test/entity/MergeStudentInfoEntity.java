@@ -42,7 +42,7 @@ public class MergeStudentInfoEntity {
     @ExcelField(name = "创建名称",mergeCell = true)
     private String createName;
 
-    @ExcelField(name = "审核状态",converterValueExpression = "1=编辑,2=审核中,3=审核成功,4=审核失败")
+    @ExcelField(name = "审核状态",converterValueExpression = "0=初次编辑,1=编辑,2=审核中,3=审核成功,4=审核失败")
     private Integer auditStatus;
 
     @ExcelField(name = "是否公开",converterValueExpression = "1=公开,2=未公开")
