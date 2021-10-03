@@ -85,9 +85,9 @@ public class CellHelper {
      */
     public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) throws ValueParseException {
         // 将合并单元格中的行和列的单元格对象统统创建出来
-        for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
+        for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
-            for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
+            for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
                 createCellIfNotExists(row,columnIndex);
             }
         }
@@ -106,9 +106,9 @@ public class CellHelper {
      * @param cellStyle 单元格样式
      */
     public static void setCellStyle(Sheet sheet,CellRangeAddress cellAddresses, CellStyle cellStyle){
-        for (int rowIndex = 0; rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
+        for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
-            for (int columnIndex = 0; columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
+            for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
                 Cell cellIfNotExists = createCellIfNotExists(row, columnIndex);
                 cellIfNotExists.setCellStyle(cellStyle);
             }

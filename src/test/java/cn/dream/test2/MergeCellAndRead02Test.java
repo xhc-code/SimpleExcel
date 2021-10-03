@@ -3,6 +3,9 @@ package cn.dream.test2;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test.entity.MergeStudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.*;
@@ -101,9 +104,14 @@ public class MergeCellAndRead02Test {
         writeExcel.setSheetData(MergeStudentInfoEntity.class,studentTestEntityList);
 
         writeExcel.handlerCustomizeCellItem((workbook, sheet, cacheStyle, cellHelper) -> {
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(1, 2, 0, 5);
+            cellHelper.writeCellValue(cellRangeAddress,"我是跨列值");
 
-            cellHelper.writeCellValue(new CellRangeAddress(0,0,0,5),"我是跨列值");
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
+            cellHelper.setCellStyle(cellRangeAddress,cacheStyle.cache(cellStyle));
 
         });
         writeExcel.generateHeader();
