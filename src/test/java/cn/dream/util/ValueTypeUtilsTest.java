@@ -3,6 +3,9 @@ package cn.dream.util;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+/**
+ * 测试值类型转换工具
+ */
 @SpringBootTest
 class ValueTypeUtilsTest {
 
