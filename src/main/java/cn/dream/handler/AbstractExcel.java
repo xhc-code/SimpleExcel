@@ -224,7 +224,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected Sheet getSheet(){
-        Validate.notNull(this.sheet,"当前未设置Sheet对象,请通过相关API进行设置");
+        Validate.notNull(this.sheet,"当前未设置Sheet对象,请通过相关API(createSheet)进行设置");
         return this.sheet;
     }
 

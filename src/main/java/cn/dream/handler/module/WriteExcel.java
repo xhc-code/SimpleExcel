@@ -75,6 +75,12 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         int newRowNum = getNewRowNum();
 
         List<Field> fieldList = sheetData.getFieldList();
+
+        if(fieldList.size() == 0){
+            log.warn("Header集合为空,请确认是否预期的行为");
+            return;
+        }
+
         Collection<?> dataColl = sheetData.getDataList();
 
         AtomicInteger rowIndex = new AtomicInteger(newRowNum);
@@ -92,16 +98,19 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                     return createCellIfNotExists(targetSheetRowIfNotExists.get(), columnIndex.getAndIncrement());
                 }, HandlerTypeEnum.BODY);
             }
+
+
             Row row = targetSheetRowIfNotExists.get();
 
-            /**
-             * 设置行样式单元格信息
-             */
-            CellStyle globalCellStyle = getGlobalCellStyle(row.getRowStyle());
-            ReflectionUtils.newInstance(excelAnno.handleRowStyle()).setRowStyle(globalCellStyle,v,rowIndex.get());
-            globalCellStyle = createCellStyleIfNotExists(globalCellStyle);
-            row.setRowStyle(globalCellStyle);
-
+            if(row != null){
+                /**
+                 * 设置行样式单元格信息
+                 */
+                CellStyle globalCellStyle = getGlobalCellStyle(row.getRowStyle());
+                ReflectionUtils.newInstance(excelAnno.handleRowStyle()).setRowStyle(globalCellStyle,v,rowIndex.get());
+                globalCellStyle = createCellStyleIfNotExists(globalCellStyle);
+                row.setRowStyle(globalCellStyle);
+            }
             rowIndex.getAndIncrement();
         });
     }
