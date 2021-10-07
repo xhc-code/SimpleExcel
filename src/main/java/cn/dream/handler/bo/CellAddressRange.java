@@ -30,6 +30,9 @@ public class CellAddressRange {
      */
     private int firstCol;
 
+    /**
+     * 尾列
+     */
     private int lastCol;
 
 }

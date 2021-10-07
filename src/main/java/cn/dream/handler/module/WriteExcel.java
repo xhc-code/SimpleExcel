@@ -1,7 +1,6 @@
 package cn.dream.handler.module;
 
-import cn.dream.anno.Excel;
-import cn.dream.anno.ExcelField;
+import cn.dream.anno.*;
 import cn.dream.anno.handler.excelfield.DefaultConverterValueAnnoHandler;
 import cn.dream.anno.handler.excelfield.DefaultExcelFieldStyleAnnoHandler;
 import cn.dream.anno.handler.excelfield.DefaultSelectValueListAnnoHandler;
@@ -77,7 +76,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
         List<Field> fieldList = sheetData.getFieldList();
 
         if(fieldList.size() == 0){
-            log.warn("Header集合为空,请确认是否预期的行为");
+            log.warn("Header集合为空,请确认是否预期的行为？");
             return;
         }
 
@@ -110,6 +109,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                 ReflectionUtils.newInstance(excelAnno.handleRowStyle()).setRowStyle(globalCellStyle,v,rowIndex.get());
                 globalCellStyle = createCellStyleIfNotExists(globalCellStyle);
                 row.setRowStyle(globalCellStyle);
+
             }
             rowIndex.getAndIncrement();
         });
@@ -155,37 +155,37 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
             Cell cell = toCellSupplier.get();
 
             // 设置自动列宽
-            if(fieldAnnotation.autoSizeColumn()){
-                recordAutoColumnMap.putIfAbsent(field, CellAddressRange.builder()
-                        .firstCol(cell.getColumnIndex())
-                        .lastCol(cell.getColumnIndex())
-                        .build());
-            }
+            recordAutoColumnMap.putIfAbsent(field, CellAddressRange.builder()
+                    .firstCol(cell.getColumnIndex())
+                    .lastCol(cell.getColumnIndex())
+                    .build());
 
 
             // 这里记录下来位置，然后放到write的时候进行设置
             // 设置此Cell可选择的值列表
             if(HandlerTypeEnum.BODY == handlerTypeEnum){
 
+                FieldSelectValueConf selectValueConf = fieldAnnotation.selectValueConf();
+                FieldConverterValueConf converterValueConf = fieldAnnotation.converterValueConf();
                 // Excel下拉框选项的处理
-                String s = fieldAnnotation.converterValueExpression();
-                if(StringUtils.isNotEmpty(s) || fieldAnnotation.selectValueListCls() != DefaultSelectValueListAnnoHandler.class ){
+                String s = converterValueConf.valueExpression();
+                if(StringUtils.isNotEmpty(s) || selectValueConf.selectValueListCls() != DefaultSelectValueListAnnoHandler.class ){
                     RecordDataValidator recordDataValidator = recordDataValidatorMap.computeIfAbsent(field, field1 -> {
-                        Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = fieldAnnotation.selectValueListCls();
+                        Class<? extends DefaultSelectValueListAnnoHandler> selectValueListCls = selectValueConf.selectValueListCls();
                         DefaultSelectValueListAnnoHandler defaultSelectValueListAnnoHandler = ReflectionUtils.newInstance(selectValueListCls);
-                        List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(fieldAnnotation.selectValues());
+                        List<String> parseExpression = defaultSelectValueListAnnoHandler.parseExpression(selectValueConf.selectValues());
 
                         // 是否需要转换值表达式生成对应的下拉框值
-                        if(fieldAnnotation.buildSelectValuesFromValueExpression()){
-                            Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                        if(selectValueConf.buildFromValueExpression()){
+                            Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = converterValueConf.valueCls();
                             DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
-                            Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                            Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(converterValueConf.valueExpression());
                             defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
                             parseExpression.addAll(dictDataMap.values());
                         }
 
                         List<String> selectValueListAnnoHandlerSelectValues = defaultSelectValueListAnnoHandler.getSelectValues(parseExpression);
-                        SheetData sheetData = getSheetData();
+                        SheetData<?> sheetData = getSheetData();
                         return RecordDataValidator.builder()
                                 .selectedItems(selectValueListAnnoHandlerSelectValues.toArray(TYPE_STRINGS))
                                 .handlerTypeEnum(handlerTypeEnum)
@@ -205,8 +205,7 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                     cellAddressRange.setLastCol(cell.getColumnIndex());
                 }
 
-
-                if(fieldAnnotation.mergeCell()){
+                if(fieldAnnotation.mergeConf().mergeCell()){
                     // 记录合并单元格的范围列表
                     String groupName = getMergeCellGroupName(o, field);
                     if(StringUtils.isNotEmpty(groupName)){
@@ -242,12 +241,13 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                     // 当字段有值才需要进行转换
                     if(ObjectUtils.isNotEmpty(valueAtomicReference.get())){
                         // 字典转换值
-                        Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                        FieldConverterValueConf fieldConverterValueConf = fieldAnnotation.converterValueConf();
+                        Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldConverterValueConf.valueCls();
                         DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
-                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                        Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldConverterValueConf.valueExpression());
                         defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
                         if(!dictDataMap.isEmpty()){
-                            if(fieldAnnotation.enableConverterMultiValue()){
+                            if(fieldConverterValueConf.enableMultiValue()){
                                 defaultConverterValueAnnoHandler.multiMapping(dictDataMap,classAtomicReference,valueAtomicReference);
                             }else{
                                 defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,classAtomicReference,valueAtomicReference);
@@ -267,10 +267,11 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
                 }
 
                 // 设置样式单元格
-                DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldAnnotation.cellStyleCls());
+                FieldCellStyleConf fieldCellStyleConf = fieldAnnotation.cellStyleConf();
+                DefaultExcelFieldStyleAnnoHandler defaultExcelFieldStyleAnnoHandler = ReflectionUtils.newInstance(fieldCellStyleConf.cellStyleCls());
                 CellStyle globalCellStyle = getGlobalCellStyle();
                 defaultExcelFieldStyleAnnoHandler.cellStyle(globalCellStyle,valueAtomicReference.get(),handlerTypeEnum);
-                globalCellStyle = createCellStyleIfNotExists(workbook,globalCellStyle);
+                globalCellStyle = createCellStyleIfNotExists(globalCellStyle);
                 cell.setCellStyle(globalCellStyle);
 
                 currentHandlerFieldAnno = fieldAnnotation;

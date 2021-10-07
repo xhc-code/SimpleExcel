@@ -2,6 +2,7 @@ package cn.dream.handler;
 
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
+import cn.dream.anno.FieldMergeConf;
 import cn.dream.anno.MergeField;
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
 import cn.dream.excep.NotFoundSetCellHandlerException;
@@ -302,7 +303,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         ignoreFieldGetterMethod.getFieldSupplierList().forEach(sSupplier -> ignoreFieldApplyList.add(sSupplier.toPropertyName()));
     }
 
-    public SheetData getSheetData(){
+    public SheetData getSheetData() throws UnknownValueException {
         if(this.sheetData == null){
             throw new UnknownValueException("SheetData未设置,请通过 setSheetData 进行设置数据项");
         }
@@ -413,11 +414,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         try {
             doGetGroupName = doGetGroupName(o, field, sheetData);
 
-            if(fieldAnnotation.mergeFields().length > 0){
+            FieldMergeConf mergeConf = fieldAnnotation.mergeConf();
+            if(mergeConf.mergeFields().length > 0){
                 List<Field> groupKeyFieldList = null;
                 if(!cacheMergeFieldListMap.containsKey(field)){
                     groupKeyFieldList = cacheMergeFieldListMap.computeIfAbsent(field, field1 -> {
-                        MergeField[] mergeFields = fieldAnnotation.mergeFields();
+                        MergeField[] mergeFields = mergeConf.mergeFields();
                         Set<String> fieldSet = Arrays.stream(mergeFields).sorted(Comparator.comparingInt(MergeField::order)).map(MergeField::fieldName).collect(Collectors.toSet());
                         List<Field> fieldList = getFields();
                         return fieldList.stream().filter(f -> fieldSet.contains(f.getName())).collect(Collectors.toList());
@@ -632,6 +634,26 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      */
     protected void writeData(Sheet sheet){
 
+        /**
+         * 设置默认的行高
+         */
+        try {
+            SheetData sheetData = getSheetData();
+
+            if(sheetData != null){
+                Excel excelAnno = sheetData.getExcelAnno();
+
+                // 设置默认的行高
+                if(excelAnno.defaultRowHeight() > -1){
+                    sheet.setDefaultRowHeight(excelAnno.defaultRowHeight());
+                }
+            }
+
+        } catch (UnknownValueException e) {
+            // 这里如果没有设置 SheetData 对象，那么 body 体可以完全不用执行
+        }
+
+
         Validate.notNull(recordCellAddressRangeMap);
         /**
          * 合并单元格
@@ -647,7 +669,16 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
          * 设置自动列宽
          */
         recordAutoColumnMap.forEach((field,cellAddressRange) -> {
-            sheet.autoSizeColumn(cellAddressRange.getFirstCol());
+            ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
+            if(fieldAnnotation.autoSizeColumn()){
+                sheet.autoSizeColumn(cellAddressRange.getFirstCol());
+            }else{
+                // 设置列宽的指定值
+                if(fieldAnnotation.columnWidth() > -1){
+                    sheet.setColumnWidth(cellAddressRange.getFirstCol(),fieldAnnotation.columnWidth());
+                }
+            }
+
         });
         recordAutoColumnMap.clear();
 

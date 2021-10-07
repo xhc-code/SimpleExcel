@@ -2,6 +2,8 @@ package cn.dream.handler.module;
 
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
+import cn.dream.anno.FieldConverterValueConf;
+import cn.dream.anno.FieldValidateHeaderConf;
 import cn.dream.anno.handler.excelfield.DefaultConverterValueAnnoHandler;
 import cn.dream.excep.ActionNotSupportedException;
 import cn.dream.handler.AbstractExcel;
@@ -27,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("DuplicatedCode")
 @Slf4j
 public class ReadExcel extends AbstractExcel<ReadExcel> {
 
@@ -138,7 +141,8 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
         if(byHeaderName){
             fieldMap = fieldList.stream().collect(Collectors.toMap(field -> {
                 ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
-                return StringUtils.isNotBlank(fieldAnnotation.validateHeaderName()) ? fieldAnnotation.validateHeaderName() : fieldAnnotation.name();
+                FieldValidateHeaderConf fieldValidateHeaderConf = fieldAnnotation.validateHeaderConf();
+                return StringUtils.isNotBlank(fieldValidateHeaderConf.headerName()) ? fieldValidateHeaderConf.headerName() : fieldAnnotation.name();
             }, field -> field));
         }
 
@@ -163,12 +167,15 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                 Validate.isTrue( i < fieldList.size() , "当前字段集合不存在索引 %d ,请检查实体与Excel之间的映射关系是否达到一一对应的关系",i);
                 field = fieldList.get(i);
                 fieldAnnotation = field.getAnnotation(ExcelField.class);
-                if(fieldAnnotation != null && fieldAnnotation.validateHeader()){
-                    String headerName = fieldAnnotation.validateHeaderName();
-                    if(StringUtils.isEmpty(headerName)){
-                        headerName = fieldAnnotation.name();
+                if(fieldAnnotation != null){
+                    FieldValidateHeaderConf fieldValidateHeaderConf = fieldAnnotation.validateHeaderConf();
+                    if(fieldValidateHeaderConf.validation()){
+                        String headerName = fieldValidateHeaderConf.headerName();
+                        if(StringUtils.isEmpty(headerName)){
+                            headerName = fieldAnnotation.name();
+                        }
+                        Validate.isTrue(headerName.equals(headerInfo.getHeaderNameAsString()),"Header表头不一致(AnnoHeader - ExcelHeader)：%s - %s",headerName,headerInfo.getHeaderNameAsString());
                     }
-                    Validate.isTrue(headerName.equals(headerInfo.getHeaderNameAsString()),"Header表头不一致(AnnoHeader - ExcelHeader)：%s - %s",headerName,headerInfo.getHeaderNameAsString());
                 }
             }
 
@@ -187,9 +194,10 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
             // 当字段有值才需要进行转换
             if(ObjectUtils.isNotEmpty(cellValue)){
                 // 字典转换值
-                Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = fieldAnnotation.converterValueCls();
+                FieldConverterValueConf converterValueConf = fieldAnnotation.converterValueConf();
+                Class<? extends DefaultConverterValueAnnoHandler> converterValueCls = converterValueConf.valueCls();
                 DefaultConverterValueAnnoHandler defaultConverterValueAnnoHandler = ReflectionUtils.newInstance(converterValueCls);
-                Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(fieldAnnotation.converterValueExpression());
+                Map<String, String> dictDataMap = defaultConverterValueAnnoHandler.parseExpression(converterValueConf.valueExpression());
                 defaultConverterValueAnnoHandler.fillConverterValue(dictDataMap);
                 if(!dictDataMap.isEmpty()){
                     // 反转Map，用于从 Excel读取值并转换值
@@ -200,7 +208,7 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
                      *    当未成功转换值写入到Excel中，再读取时，值会为从getCellValueAsdouble类型读出，值会为 0.0这种格式的，这不是逻辑代码的问题，思考为什么会转换不成功呢？
                      */
                     AtomicReference<Object> valueAtomicReference=new AtomicReference<>(cellValue);
-                    if(fieldAnnotation.enableConverterMultiValue()){
+                    if(converterValueConf.enableMultiValue()){
                         defaultConverterValueAnnoHandler.multiMapping(dictDataMap,new AtomicReference<>(fieldType),valueAtomicReference);
                     }else{
                         defaultConverterValueAnnoHandler.simpleMapping(dictDataMap,new AtomicReference<>(fieldType),valueAtomicReference);
