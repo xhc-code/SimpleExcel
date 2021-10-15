@@ -2,6 +2,7 @@ package cn.dream.anno;
 
 import cn.dream.anno.handler.excelfield.*;
 import cn.dream.anno.mark.FutureUse;
+import org.apache.poi.ss.usermodel.Sheet;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -47,7 +48,11 @@ public @interface ExcelField {
 	FieldConverterValueConf converterValueConf() default @FieldConverterValueConf();
 
 	/**[导出时生效]
-	 * 列宽大小；-1为不进行设置
+	 * 列宽大小；-1为不进行设置;
+	 * <hr />
+	 *
+	 * 设置列宽，请参考 {@link Sheet#setColumnWidth(int, int)} 上的注释说明
+	 *
 	 * @return
 	 */
 	int columnWidth() default -1;
