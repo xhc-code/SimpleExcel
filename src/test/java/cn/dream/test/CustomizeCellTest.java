@@ -93,7 +93,7 @@ public class CustomizeCellTest {
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             cellStyle.setFillBackgroundColor(IndexedColors.RED.getIndex());
-            cell.setCellStyle(putCellStyle.apply(cellStyle));
+            cell.setCellStyle(putCellStyle.cache(cellStyle));
 
         });
 

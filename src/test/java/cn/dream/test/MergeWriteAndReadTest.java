@@ -4,6 +4,7 @@ import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
 import cn.dream.test.entity.MergeStudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -108,22 +109,21 @@ public class MergeWriteAndReadTest {
 
         writeExcel.setSheetData(MergeStudentInfoEntity.class,studentTestEntityList);
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle, setMergeCell) -> {
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,2,0,0),"用户UID");
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle, cellHelper) -> {
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,2,0,0),"用户UID");
 
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,0,1,4),"基本信息");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,1,1),"用户名称");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,2,2),"用户年龄");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,3,3),"用户性别");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,4,4),"生日日期");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,0,1,4),"基本信息");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,1,1),"用户名称");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,2,2),"用户年龄");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,3,3),"用户性别");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,4,4),"生日日期");
 
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(0,0,5,9),"其他信息");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,5,5),"记录日期");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,6,6),"创建ID");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,7,7),"创建名称");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,8,8),"审核状态");
-            setMergeCell.setMergeCell(sheet,new CellRangeAddress(1,2,9,9),"是否公开");
-
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,0,5,9),"其他信息");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,5,5),"记录日期");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,6,6),"创建ID");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,7,7),"创建名称");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,8,8),"审核状态");
+            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,9,9),"是否公开");
 
 
 
@@ -142,7 +142,7 @@ public class MergeWriteAndReadTest {
 
     @Test
     @Order(2)
-    public void read() throws IOException, IllegalAccessException {
+    public void read() throws IOException, IllegalAccessException, InvalidFormatException {
 
         ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(writeOutputFile));
 

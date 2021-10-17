@@ -1,7 +1,6 @@
 package cn.dream.test2.entity;
 
-import cn.dream.anno.Excel;
-import cn.dream.anno.ExcelField;
+import cn.dream.anno.*;
 import lombok.*;
 
 import java.util.Date;
@@ -24,7 +23,7 @@ public class StudentEntity {
     /**
      * 年份
      */
-    @ExcelField(name = "年龄",cellStyleCls = AgeExcelFieldStyleAnnoHandler.class)
+    @ExcelField(name = "年龄",cellStyleConf = @FieldCellStyleConf(cellStyleCls = AgeExcelFieldStyleAnnoHandler.class))
     private Integer age;
 
     /**
@@ -36,13 +35,13 @@ public class StudentEntity {
     @ExcelField(name = "生日日期")
     private Date birthdayDate;
 
-    @ExcelField(name = "是否公开",selectValues = "是,否",converterValueExpression = "1=是,0=否")
+    @ExcelField(name = "是否公开",converterValueConf = @FieldConverterValueConf(valueExpression = "1=是,0=否"))
     private Integer isPublic;
 
-    @ExcelField(name = "省份名称",mergeCell = true)
+    @ExcelField(name = "省份名称",mergeConf = @FieldMergeConf(mergeCell = true))
     private String provinceName;
 
-    @ExcelField(name = "市区名称",mergeCell = true)
+    @ExcelField(name = "市区名称",mergeConf = @FieldMergeConf(mergeCell = true))
     private String cityName;
 
     @ExcelField(name = "区县名称")

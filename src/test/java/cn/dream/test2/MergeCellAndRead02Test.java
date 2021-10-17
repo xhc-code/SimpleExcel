@@ -1,11 +1,12 @@
-package cn.dream.test;
+package cn.dream.test2;
 
-import cn.dream.handler.module.ReadExcel;
 import cn.dream.handler.module.WriteExcel;
-import cn.dream.test.entity.StudentInfoEntity;
+import cn.dream.test.entity.MergeStudentInfoEntity;
 import cn.dream.util.DateUtils;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,43 +19,33 @@ import java.util.List;
 
 /**
  * @author xiaohuichao
- * @createdDate 2021/9/21 12:12
+ * @createdDate 2021/9/27 22:22
  */
 @SpringBootTest
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
-public class WriteAndReadTest {
+public class MergeCellAndRead02Test {
 
-
-    private static List<StudentInfoEntity> studentTestEntityList = new ArrayList<>();
-
-    private static ClassPathResource classPathResource;
-
-    private static File writeOutputFile;
-
-    private static WriteExcel writeExcel;
-
+    private static File targetDire = null;
 
     @BeforeAll
     public static void init() throws IOException {
-        classPathResource = new ClassPathResource("template");
-
-        File file = classPathResource.getFile();
-
-        file = new File(file, WriteAndReadTest.class.getSimpleName());
-        boolean mkdirDire = !file.exists() && file.mkdirs();
-
-        writeOutputFile = new File(file, "writeExcel结果.xlsx");
-
-        writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
+        // Template目录
+        ClassPathResource template = new ClassPathResource("template");
+        File file = new File(template.getFile(), "自定义表头并写入数据");
+        boolean b = !file.exists() && file.mkdirs();
+        targetDire = file;
 
         initData();
     }
+
+
+    private static List<MergeStudentInfoEntity> studentTestEntityList = new ArrayList<>();
 
     /**
      * 初始化数据
      */
     public static void initData(){
-        StudentInfoEntity studentTestEntity = new StudentInfoEntity();
+        MergeStudentInfoEntity studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setUserName("张三01");
         studentTestEntity.setSex('男');
@@ -68,7 +59,7 @@ public class WriteAndReadTest {
         studentTestEntityList.add(studentTestEntity);
 
 
-        studentTestEntity = new StudentInfoEntity();
+        studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("002");
         studentTestEntity.setUserName("张三02");
         studentTestEntity.setSex('女');
@@ -82,7 +73,7 @@ public class WriteAndReadTest {
         studentTestEntityList.add(studentTestEntity);
 
 
-        studentTestEntity = new StudentInfoEntity();
+        studentTestEntity = new MergeStudentInfoEntity();
         studentTestEntity.setUid("001");
         studentTestEntity.setUserName("张三01");
         studentTestEntity.setSex('男');
@@ -99,52 +90,45 @@ public class WriteAndReadTest {
 
 
 
-    @Test
-    @Order(0)
-    public void write(){
-
-        writeExcel.createSheet("我是一个测试write的Sheet");
-
-        writeExcel.setSheetData(StudentInfoEntity.class,studentTestEntityList);
-
-        writeExcel.generateHeader();
-
-        writeExcel.generateBody();
-    }
-
-
-    @Test
-    @Order(1)
-    public void writeComplete() throws IOException {
-        writeOutputFile = writeExcel.write(writeOutputFile);
-        System.out.println("准备读取----------------------------------------------");
-    }
-
-    @Test
-    @Order(2)
-    public void read() throws IOException, IllegalAccessException, InvalidFormatException {
-
-        ReadExcel readExcel = ReadExcel.newInstance(WorkbookFactory.create(writeOutputFile));
-
-        readExcel.setSheetDataCls(StudentInfoEntity.class);
-
-        readExcel.toggleSheet(0);
-        readExcel.readData();
-
-        List<StudentInfoEntity> result = readExcel.getResult();
-        result.forEach(System.err::println);
-
-    }
-
-
     /**
-     * 最终写入到指定文件
-     * @throws IOException
+     * 手动创建合并单元格表头并写入数据
      */
-    @AfterAll
-    public static void after() throws IOException {
+    @Test
+    public void test1() throws IOException {
 
+        WriteExcel writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
+
+        writeExcel.createSheet("我是测试");
+
+
+        writeExcel.setSheetData(MergeStudentInfoEntity.class,studentTestEntityList);
+
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, cacheStyle, cellHelper) -> {
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(1, 2, 0, 5);
+            cellHelper.writeCellValue(cellRangeAddress,"我是跨列值");
+
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            cellHelper.setCellStyle(cellRangeAddress,cacheStyle.cache(cellStyle));
+
+        });
+        writeExcel.generateHeader();
+        writeExcel.generateBody();
+
+
+
+        writeExcel.write(targetDire);
     }
 
+
+
+    @AfterAll
+    public static void after(){
+
+
+
+    }
 
 }

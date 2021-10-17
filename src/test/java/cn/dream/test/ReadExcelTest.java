@@ -3,6 +3,7 @@ package cn.dream.test;
 import cn.dream.handler.module.ReadExcel;
 import cn.dream.test2.entity.StudentEntity;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ public class ReadExcelTest {
     private static ReadExcel readExcel = null;
 
     @BeforeAll
-    public static void init() throws IOException {
+    public static void init() throws IOException, InvalidFormatException {
         classPathResource = new ClassPathResource("template");
 
         File file = classPathResource.getFile();

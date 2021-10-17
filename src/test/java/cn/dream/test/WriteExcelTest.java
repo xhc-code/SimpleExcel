@@ -116,7 +116,7 @@ public class WriteExcelTest {
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cell.setCellStyle(putCellStyle.apply(cellStyle));
+            cell.setCellStyle(putCellStyle.cache(cellStyle));
 
         });
 
@@ -132,7 +132,7 @@ public class WriteExcelTest {
      * 测试Copy行
      */
     @Test
-    public void test3() throws IOException {
+    public void test3() throws IOException, InvalidFormatException {
 
         File file = new File(classPathResource.getFile(), "CopyExcel模板.xlsx");
         CopyExcel copyExcel = writeExcel.newCopyExcel(WorkbookFactory.create(file));

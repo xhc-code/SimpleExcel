@@ -1,6 +1,7 @@
 package cn.dream.handler.module;
 
 import cn.dream.handler.AbstractExcel;
+import cn.dream.handler.module.helper.CellHelper;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.anno.Feature.RequireCopy;
 import lombok.Getter;
@@ -36,8 +37,6 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
         super();
         this.fromWorkbook = fromWorkbook;
         this.workbook = workbook;
-
-        initConsumerData();
     }
 
     protected Workbook getFromWorkbook(){
@@ -53,16 +52,16 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
     @Override
     public CopyExcel newSheet(String sheetName) {
         CopyExcel copyExcel = new CopyExcel();
-        ReflectionUtils.copyPropertiesByAnno(this,copyExcel);
-        copyExcel.initConsumerData();
-        copyExcel.createSheet(sheetName);
         copyExcel.embeddedObject = true;
+        copyExcel.createSheet(sheetName);
+        ReflectionUtils.copyPropertiesByAnno(this,copyExcel);
+        copyExcel.initConsumer();
         return copyExcel;
     }
 
     public static CopyExcel newInstance(Workbook fromWorkbook,Workbook workbook){
         CopyExcel copyExcel = new CopyExcel(fromWorkbook, workbook);
-        copyExcel.oneInit();
+        copyExcel.initConsumer();
         return copyExcel;
     }
 
@@ -187,10 +186,10 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
             copyRangeAddressCell(rangeRegion, newCellRangeAddress);
 
             // 处理合并单元格的值
-            Cell sourceFirstCell = getFirstCell(getFromSheet(), rangeRegion);
+            Cell sourceFirstCell = CellHelper.getFirstCell(getFromSheet(), rangeRegion);
             Object cellValue = getCellValue(sourceFirstCell);
 
-            Cell toFirstCell = getFirstCell(getSheet(), newCellRangeAddress);
+            Cell toFirstCell = CellHelper.getFirstCell(getSheet(), newCellRangeAddress);
 
 
             pointData.setValue(cellValue);

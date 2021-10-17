@@ -3,6 +3,7 @@ package cn.dream.test;
 import cn.dream.handler.module.CopyExcel;
 import cn.dream.handler.module.WriteExcel;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +29,7 @@ public class CopyExcelTest {
 
 
     @BeforeAll
-    public static void init() throws IOException {
+    public static void init() throws IOException, InvalidFormatException {
         classPathResource = new ClassPathResource("template");
 
         File file = classPathResource.getFile();
@@ -87,7 +88,7 @@ public class CopyExcelTest {
         WriteExcel writeExcel = copyExcel.newWriteExcel();
         writeExcel.createSheet("我是copy里的写入的");
 
-        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,setMergeCell) -> {
+        writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle,cellHelper) -> {
 
             Row row = sheet.createRow(1);
             Cell cell = row.createCell(1);
@@ -96,7 +97,7 @@ public class CopyExcelTest {
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cell.setCellStyle(putCellStyle.apply(cellStyle));
+            cell.setCellStyle(putCellStyle.cache(cellStyle));
 
         });
 

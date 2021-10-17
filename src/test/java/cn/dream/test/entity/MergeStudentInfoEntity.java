@@ -2,6 +2,8 @@ package cn.dream.test.entity;
 
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
+import cn.dream.anno.FieldConverterValueConf;
+import cn.dream.anno.FieldMergeConf;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -39,13 +41,13 @@ public class MergeStudentInfoEntity {
     @ExcelField(name = "创建ID")
     private Integer createBy;
 
-    @ExcelField(name = "创建名称",mergeCell = true)
+    @ExcelField(name = "创建名称",mergeConf = @FieldMergeConf(mergeCell = true))
     private String createName;
 
-    @ExcelField(name = "审核状态",converterValueExpression = "1=编辑,2=审核中,3=审核成功,4=审核失败")
+    @ExcelField(name = "审核状态",converterValueConf = @FieldConverterValueConf(valueExpression = "0=初次编辑,1=编辑,2=审核中,3=审核成功,4=审核失败"))
     private Integer auditStatus;
 
-    @ExcelField(name = "是否公开",converterValueExpression = "1=公开,2=未公开")
+    @ExcelField(name = "是否公开",converterValueConf = @FieldConverterValueConf(valueExpression = "1=公开,2=未公开"))
     private Integer isPublic;
 
 }

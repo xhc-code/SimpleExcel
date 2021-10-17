@@ -20,6 +20,13 @@ public @interface Excel {
 	 * @return
 	 */
 	String name();
+
+
+	/**[导出时生效]
+	 * 行高大小；-1为不进行设置
+	 * @return
+	 */
+	short defaultRowHeight() default -1;
 	
 	/**[导出时生效]
 	 * 导出时Excel生成的名称

@@ -31,7 +31,7 @@ public class DefaultConverterValueAnnoHandler {
 		String[] split = expression.split(",");
 		for (String item : split) {
 			String[] split1 = item.split("=");
-			Validate.isTrue(split1.length == 2,"转换值表达式格式错误;");
+			Validate.isTrue(split1.length == 2, String.format("转换值表达式格式错误;预期格式:Key=Value,实际为:%s", item));
 
 			objectObjectHashMap.put(split1[0],split1[1]);
 		}
@@ -81,7 +81,6 @@ public class DefaultConverterValueAnnoHandler {
 	 * @param dictDataMap 字段数据Map，由 {@code #getConverterValueMap} 传值
 	 * @param javaTypeCls 值的预期类型,不可更改值类型,更改成功也是无效的；表明字段的类型；写入时有效,读取时无作用
 	 * @param value 引用值，可更改此值到外部的值
-	 * @param reverse key和value反转位置;true则是value-key，false则是：key-value
 	 */
 	public void multiMapping(Map<String,String> dictDataMap,final AtomicReference<Class<?>> javaTypeCls,AtomicReference<Object> value){
 		String oString = value.get().toString();

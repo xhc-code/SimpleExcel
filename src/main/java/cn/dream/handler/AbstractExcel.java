@@ -2,19 +2,22 @@ package cn.dream.handler;
 
 import cn.dream.anno.Excel;
 import cn.dream.anno.ExcelField;
+import cn.dream.anno.FieldMergeConf;
 import cn.dream.anno.MergeField;
 import cn.dream.anno.handler.DefaultExcelNameAnnoHandler;
+import cn.dream.excep.NotFoundSetCellHandlerException;
 import cn.dream.excep.UnknownValueException;
 import cn.dream.handler.bo.CellAddressRange;
 import cn.dream.handler.bo.RecordDataValidator;
 import cn.dream.handler.bo.SheetData;
+import cn.dream.handler.module.helper.CellHelper;
+import cn.dream.handler.module.helper.SetCellValueHelper;
 import cn.dream.util.ReflectionUtils;
 import cn.dream.util.ValueTypeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.WorkbookUtil;
@@ -24,10 +27,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.text.DateFormat;
-import java.text.ParseException;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -35,7 +37,7 @@ import java.util.stream.Collectors;
  * @param <T> 创建实例返回的对象的值
  */
 @Slf4j
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked", "deprecation"})
 public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     protected static final Field[] EMPTY_FIELDS = new Field[0];
@@ -67,117 +69,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
             Boolean.class, Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, String.class, Date.class, Calendar.class
     };
 
-    @FunctionalInterface
-    interface ISetCellValue {
-
-        /**
-         * 暴露出来的执行设置Cell值方法
-         * @param cell
-         * @param value
-         * @param cellConsumer
-         * @throws ParseException
-         */
-        default void setValue(Cell cell, Object value,Consumer<Cell> cellConsumer) throws ParseException {
-            if(ObjectUtils.isEmpty(value)){
-                cell.setBlank();
-                return;
-            }
-            Validate.notNull(value,"不允许的单元格空值");
-            String finalValue;
-
-            if(value instanceof Date){
-                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
-                finalValue = dateTimeInstance.format((Date)value);
-//                ExcelField localThreadExcelField = getLocalThreadExcelField();
-//                finalValue = DateUtils.formatDate((Date)value,localThreadExcelField.dateFormat());
-                if(cellConsumer != null){
-                    cellConsumer.accept(cell);
-                }
-            }else if(value instanceof Calendar){
-                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
-                finalValue = dateTimeInstance.format(((Calendar) value).getTime());
-//                ExcelField localThreadExcelField = getLocalThreadExcelField();
-//                finalValue = DateUtils.formatDate(Date.from(((Calendar) value).toInstant()),localThreadExcelField.dateFormat());
-                if(cellConsumer != null){
-                    cellConsumer.accept(cell);
-                }
-            }else {
-                finalValue = value.toString();
-            }
-            _setValue(cell, finalValue);
-        }
-
-        void _setValue(Cell cell, String value) throws ParseException;
-    }
-
-    /**
-     * 使用Java类型写入到单元格的值方法
-     */
-    @SuppressWarnings("Convert2MethodRef")
-    private static final ISetCellValue[] JAVA_TYPE_SET_CELL_VALUE = new ISetCellValue[]{
-            (cell, value) -> {
-                cell.setCellValue(Boolean.parseBoolean(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Byte.parseByte(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Short.parseShort(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Integer.parseInt(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Long.parseLong(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Float.parseFloat(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(Double.parseDouble(value));
-            },
-            (cell, value) -> {
-                cell.setCellValue(value);
-            },
-            (cell, value) -> {
-                DateFormat dateTimeInstance = DateFormat.getDateTimeInstance();
-                cell.setCellValue(dateTimeInstance.parse(value));
-            },
-            (cell, value) -> {
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(DateFormat.getDateTimeInstance().parse(value));
-                cell.setCellValue(calendar);
-            }
-    };
-
-
-    private static final Map<Class<?>,ISetCellValue> SET_CELL_VALUE_MAP = new HashMap<>();
-
-    static {
-
-        SET_CELL_VALUE_MAP.put(Boolean.class,JAVA_TYPE_SET_CELL_VALUE[0]);
-        SET_CELL_VALUE_MAP.put(Byte.class,JAVA_TYPE_SET_CELL_VALUE[1]);
-        SET_CELL_VALUE_MAP.put(Short.class,JAVA_TYPE_SET_CELL_VALUE[2]);
-        SET_CELL_VALUE_MAP.put(Integer.class,JAVA_TYPE_SET_CELL_VALUE[3]);
-        SET_CELL_VALUE_MAP.put(Long.class,JAVA_TYPE_SET_CELL_VALUE[4]);
-        SET_CELL_VALUE_MAP.put(Float.class,JAVA_TYPE_SET_CELL_VALUE[5]);
-        SET_CELL_VALUE_MAP.put(Double.class,JAVA_TYPE_SET_CELL_VALUE[6]);
-        SET_CELL_VALUE_MAP.put(Character.class,JAVA_TYPE_SET_CELL_VALUE[7]);
-        SET_CELL_VALUE_MAP.put(String.class,JAVA_TYPE_SET_CELL_VALUE[7]);
-        SET_CELL_VALUE_MAP.put(Date.class,JAVA_TYPE_SET_CELL_VALUE[8]);
-        SET_CELL_VALUE_MAP.put(Calendar.class,JAVA_TYPE_SET_CELL_VALUE[9]);
-
-    }
-
-    /**
-     * 获取设置值单元格的处理程序
-     * @param javaType
-     * @return
-     */
-    protected static ISetCellValue getSetValueCell(Class<?> javaType){
-        return SET_CELL_VALUE_MAP.get(javaType);
-    }
-
     /**
      * Java类型对应的映射到单元格类型的数组
      */
@@ -201,6 +92,11 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * 处理的Sheet对象
      */
     protected Sheet sheet;
+
+    /**
+     * 单元格操作帮助工具；延迟对象，在需要的时候获取对象；
+     */
+    protected Supplier<CellHelper> cellHelperSupplier;
 
     /**
      * 当前对象是否是通过其他Excel对象转换而来；true是，false是通过本地实例的;参阅 {@link cn.dream.handler.module.WriteExcel#newCopyExcel(Workbook)}
@@ -279,32 +175,41 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         cacheMergeFieldGroupKeyMap = new HashMap<>();
         pointerLocationMergeCellMap = new HashMap<>();
 
-        if(this.workbook != null){
-            // 初始化操作
-            defaultCellStyle = workbook.createCellStyle();
-            globalCellStyle = workbook.createCellStyle();
-        } else {
-            taskConsumer.add((abstractExcel)->{
-                abstractExcel.defaultCellStyle = workbook.createCellStyle();
-                abstractExcel.globalCellStyle = workbook.createCellStyle();
-            });
-        }
+        initConsumerList.add(c-> {
+
+            // 只有newSheet时产生的对象不用生成全局样式Map
+            if(!embeddedObject){
+                c.cacheCellStyleMap = Optional.ofNullable(c.cacheCellStyleMap).orElse(Collections.synchronizedMap(new HashMap<>()));
+            }
+            c.defaultCellStyle = Optional.ofNullable(c.defaultCellStyle).orElse(workbook.createCellStyle());
+            c.globalCellStyle = Optional.ofNullable(c.globalCellStyle).orElse(workbook.createCellStyle());
+
+            // 延迟获取对象
+            c.cellHelperSupplier = () -> new CellHelper(c.getSheet());
+
+        });
+
     }
 
     /**
-     * 避免准备实例化时,WorkBook没有值，所以延迟初始化,初始化后续的消费者列表
+     * 初始化消费者列表；在实例化子类对象时进行调用
      */
-    public void initConsumerData(){
-        taskConsumer.forEach(c -> c.accept(this));
-        taskConsumer.clear();
+    private List<Consumer<AbstractExcel<T>>> initConsumerList = new ArrayList<>();
+    /**
+     * 创建新Sheet时的消费者列表；在 {@code newSheet()} 时进行调用
+     */
+    private List<Consumer<AbstractExcel<T>>> newSheetConsumerList = new ArrayList<>();
+
+    public void initConsumer(){
+        initConsumerList.forEach(c -> c.accept(this));
+        initConsumerList.clear();
     }
 
-    /**
-     * 仅在第一次实例化对象的时候调用,xxx.newInstance;如果将 cacheCellStyleMap 保持为单例,需要确保使用的都是同一个Wordbook对象
-     */
-    public void oneInit(){
-        cacheCellStyleMap = Collections.synchronizedMap(new HashMap<>());
+    public void newSheetConsumer(){
+        newSheetConsumerList.forEach(c -> c.accept(this));
+        newSheetConsumerList.clear();
     }
+
 
     /**
      * 创建一个新指向的Sheet对象
@@ -320,8 +225,34 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected Sheet getSheet(){
-        Validate.notNull(this.sheet,"当前未设置Sheet对象,请通过相关API进行设置");
+        Validate.notNull(this.sheet,"当前未设置Sheet对象,请通过相关API(createSheet)进行设置");
         return this.sheet;
+    }
+
+    /**
+     * 获取指定Sheet的行索引(指未创建{@link Sheet#createRow(int)}的行索引)
+     * @return 基于0开始，返回新行的RowNum索引
+     */
+    protected int getNewRowNum(){
+        Sheet sheet = getSheet();
+        int lastRowNum = sheet.getLastRowNum();
+        while (sheet.getRow(lastRowNum) != null) {
+            lastRowNum++;
+        }
+        return lastRowNum;
+    }
+
+    /**
+     * 获取指定行的新列的列索引(指未创建{@link Row#createCell(int)}的行索引)
+     * @param row
+     * @return 基于0开始，返回新列的ColumnNum索引
+     */
+    protected int getNewColumnNumByRow(Row row){
+        short lastCellNum = row.getLastCellNum();
+        while (row.getCell(lastCellNum) != null) {
+            lastCellNum++;
+        }
+        return lastCellNum;
     }
 
     /**
@@ -372,7 +303,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         ignoreFieldGetterMethod.getFieldSupplierList().forEach(sSupplier -> ignoreFieldApplyList.add(sSupplier.toPropertyName()));
     }
 
-    public SheetData getSheetData(){
+    public SheetData getSheetData() throws UnknownValueException {
         if(this.sheetData == null){
             throw new UnknownValueException("SheetData未设置,请通过 setSheetData 进行设置数据项");
         }
@@ -483,11 +414,12 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         try {
             doGetGroupName = doGetGroupName(o, field, sheetData);
 
-            if(fieldAnnotation.mergeFields().length > 0){
+            FieldMergeConf mergeConf = fieldAnnotation.mergeConf();
+            if(mergeConf.mergeFields().length > 0){
                 List<Field> groupKeyFieldList = null;
                 if(!cacheMergeFieldListMap.containsKey(field)){
                     groupKeyFieldList = cacheMergeFieldListMap.computeIfAbsent(field, field1 -> {
-                        MergeField[] mergeFields = fieldAnnotation.mergeFields();
+                        MergeField[] mergeFields = mergeConf.mergeFields();
                         Set<String> fieldSet = Arrays.stream(mergeFields).sorted(Comparator.comparingInt(MergeField::order)).map(MergeField::fieldName).collect(Collectors.toSet());
                         List<Field> fieldList = getFields();
                         return fieldList.stream().filter(f -> fieldSet.contains(f.getName())).collect(Collectors.toList());
@@ -570,43 +502,38 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param value     值
      */
     protected void setCellValue(Cell cell, Class<?> valueType, Object value) {
-        ISetCellValue iSetCellValue = getSetValueCell(valueType);
+        SetCellValueHelper.ISetCellValue iSetCellValue = SetCellValueHelper.getSetValueCell(valueType);
         try {
             if(iSetCellValue == null){
-                throw new RuntimeException(String.format("无法获取到 %s 类型的Cell设置器", valueType.getName()));
+                throw new NotFoundSetCellHandlerException(String.format("无法获取到 %s 类型的Cell设置器", valueType.getName()));
             }
+
+            // 设置当前处理的注解到上下文中
+            setLocalThreadExcelField(currentHandlerFieldAnno);
 
             Object convertValue = value;
             if(ObjectUtils.isNotEmpty(value)){
-                try {
-                    setLocalThreadExcelField(currentHandlerFieldAnno);
                     convertValue = ValueTypeUtils.convertValueType(value, valueType);
-                }finally {
-                    clearLocalThreadExcelField();
+            }
+
+            iSetCellValue.setValue(cell, convertValue,(c -> {
+
+                /**
+                 * currentHandlerFieldAnno 此实例字段只有在写入Excel时，才会有值
+                 */
+                if(currentHandlerFieldAnno != null){
+                    CellStyle cellStyle = getGlobalCellStyle(c.getCellStyle());
+                    CreationHelper creationHelper = getWorkbook().getCreationHelper();
+                    cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat(currentHandlerFieldAnno.dateFormat()));
+                    c.setCellStyle(createCellStyleIfNotExists(cellStyle));
                 }
-            }
-            try {
-                setLocalThreadExcelField(currentHandlerFieldAnno);
-                iSetCellValue.setValue(cell, convertValue,(c -> {
 
-                    /**
-                     * currentHandlerFieldAnno 此实例字段只有在写入Excel时，才会有值
-                     */
-                    if(currentHandlerFieldAnno != null){
-                        CellStyle cellStyle = getGlobalCellStyle(c.getCellStyle());
-                        CreationHelper creationHelper = getWorkbook().getCreationHelper();
-                        cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat(currentHandlerFieldAnno.dateFormat()));
-                        c.setCellStyle(createCellStyleIfNotExists(cellStyle));
-                    }
-
-                }));
-            }finally {
-                clearLocalThreadExcelField();
-            }
-
-        } catch (ParseException e) {
-            e.printStackTrace();
+            }));
+        }finally {
+            // 清除上下文
+            clearLocalThreadExcelField();
         }
+
     }
 
     protected Row createRowIfNotExists(Sheet sheet, int rowIndex) {
@@ -656,32 +583,6 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     /**
-     * 获取Sheet表里的合并单元格的第一个单元格对象
-     *
-     * @param cellAddresses
-     * @return
-     */
-    protected Cell getFirstCell(Sheet sheet, CellRangeAddress cellAddresses) {
-        return getCell(sheet,cellAddresses.getFirstRow(), cellAddresses.getFirstColumn());
-    }
-    protected Cell getFirstCell(Sheet sheet, Cell cell) {
-        return getCell(sheet,cell.getRowIndex(),cell.getColumnIndex());
-    }
-
-
-    /**
-     * 获取指定行指定列的单元格对象
-     *
-     * @param row 行索引；从0开始
-     * @param col 列索引；从0开始
-     * @return
-     */
-    protected Cell getCell(Sheet sheet, int row, int col) {
-        return sheet.getRow(row).getCell(col);
-    }
-
-
-    /**
      * 获取 合并 和  合并单元格的值
      * @param sheet
      * @param cell
@@ -691,7 +592,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
         CellRangeAddress cellRangeAddress = getCellRangeAddress(sheet, cell);
         Object cellValue;
         if(cellRangeAddress != null){
-            Cell firstCell = getFirstCell(getSheet(), cellRangeAddress);
+            Cell firstCell = CellHelper.getFirstCell(getSheet(), cellRangeAddress);
             cellValue = getCellValue(firstCell);
         }else {
             cellValue = getCellValue(cell);
@@ -700,7 +601,7 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
     }
 
     protected Object getCellValue(Sheet sheet,CellRangeAddress cellAddresses) {
-        return getCellValue(getFirstCell(sheet,cellAddresses));
+        return getCellValue(CellHelper.getFirstCell(sheet,cellAddresses));
     }
 
     /**
@@ -708,72 +609,50 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param cell 单元格对象
      */
     protected Object getCellValue(Cell cell) {
-        CellType cellType = cell.getCellType();
-
+        int cellType = cell.getCellType();
         Object value = null;
-        switch (cellType) {
-            case STRING:
-                value = cell.getRichStringCellValue().getString();
-                break;
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    value = cell.getDateCellValue();
-                } else {
-                    value = cell.getNumericCellValue();
-                }
-                break;
-            case BOOLEAN:
-                value = cell.getBooleanCellValue();
-                break;
-            case FORMULA:
-                value = cell.getCellFormula();
-                break;
-            case BLANK:
-                value = "";
-                break;
-            default:
-        }
-
-        return value;
-    }
-
-    protected boolean writeCellValue(CellRangeAddress cellAddresses,Object value) throws ParseException {
-        return writeCellValue(getSheet(),cellAddresses,value);
-    }
-
-    protected boolean writeCellValue(Sheet sheet,CellRangeAddress cellAddresses,Object value) throws ParseException {
-        int i = -1;
-        try {
-            i = sheet.addMergedRegion(cellAddresses);
-
-            // 首行首列不存在，则进行创建
-            Row rowIfNotExists = createRowIfNotExists(sheet, cellAddresses.getFirstRow());
-            createCellIfNotExists(rowIfNotExists,cellAddresses.getFirstColumn());
-
-            // 获取合并单元格范围中的首个单元格进行设置值
-            Cell firstCell = getFirstCell(sheet, cellAddresses);
-            ISetCellValue setValueCell = getSetValueCell(value.getClass());
-            setValueCell.setValue(firstCell,value,null);
-
-            // 将合并单元格中的行和列的单元格对象统统创建出来
-            for (CellAddress cellAddress : cellAddresses) {
-                Row row = createRowIfNotExists(sheet, cellAddress.getRow());
-                createCellIfNotExists(row,cellAddress.getColumn());
+        if(cellType == CellType.STRING.getCode()){
+            value = cell.getRichStringCellValue().getString();
+        }else if(cellType == CellType.NUMERIC.getCode()){
+            if (DateUtil.isCellDateFormatted(cell)) {
+                value = cell.getDateCellValue();
+            } else {
+                value = cell.getNumericCellValue();
             }
-        } catch (ParseException e) {
-            /**
-             * 当出现异常时，移除对应的合并区域
-             */
-            sheet.removeMergedRegion(i);
-            throw e;
+        }else if(cellType == CellType.BOOLEAN.getCode()){
+            value = cell.getBooleanCellValue();
+        }else if(cellType == CellType.FORMULA.getCode()){
+            value = cell.getCellFormula();
+        }else if(cellType == CellType.BLANK.getCode()){
+            value = "";
         }
-        return true;
+        return value;
     }
 
     /**
      * 将临时的集合记录数据，更改写入到WorkBook中
      */
     protected void writeData(Sheet sheet){
+
+        /**
+         * 设置默认的行高
+         */
+        try {
+            SheetData sheetData = getSheetData();
+
+            if(sheetData != null){
+                Excel excelAnno = sheetData.getExcelAnno();
+
+                // 设置默认的行高
+                if(excelAnno.defaultRowHeight() > -1){
+                    sheet.setDefaultRowHeight(excelAnno.defaultRowHeight());
+                }
+            }
+
+        } catch (UnknownValueException e) {
+            // 这里如果没有设置 SheetData 对象，那么 body 体可以完全不用执行
+        }
+
 
         Validate.notNull(recordCellAddressRangeMap);
         /**
@@ -790,7 +669,16 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
          * 设置自动列宽
          */
         recordAutoColumnMap.forEach((field,cellAddressRange) -> {
-            sheet.autoSizeColumn(cellAddressRange.getFirstCol());
+            ExcelField fieldAnnotation = field.getAnnotation(ExcelField.class);
+            if(fieldAnnotation.autoSizeColumn()){
+                sheet.autoSizeColumn(cellAddressRange.getFirstCol());
+            }else{
+                // 设置列宽的指定值
+                if(fieldAnnotation.columnWidth() > -1){
+                    sheet.setColumnWidth(cellAddressRange.getFirstCol(),fieldAnnotation.columnWidth());
+                }
+            }
+
         });
         recordAutoColumnMap.clear();
 

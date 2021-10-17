@@ -20,7 +20,7 @@ public class MyTest {
         System.out.println(dateTimeInstance.parse("2021-8-12 9:39:11"));
 
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime parse = LocalDateTime.parse("2021-8-12 9:39:11", dateTimeFormatter);
+        LocalDateTime parse = LocalDateTime.parse("2021-08-12 09:39:11", dateTimeFormatter);
         System.out.println(parse);
 
 
