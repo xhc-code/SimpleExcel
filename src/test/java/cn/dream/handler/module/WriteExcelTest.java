@@ -2,6 +2,10 @@ package cn.dream.handler.module;
 
 import cn.dream.handler.module.entity.StudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -97,18 +101,47 @@ class WriteExcelTest {
 
         outputDire = new File(template, "Gen_Dire");
 
+        writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
     }
 
+    private static WriteExcel writeExcel;
+
     @Test
+    @Order(1)
     public void writeData() throws IOException {
-        WriteExcel writeExcel = WriteExcel.newInstance(new XSSFWorkbook());
         writeExcel.createSheet("学生记录Sheet");
         writeExcel.setSheetData(StudentInfoEntity.class,studentList);
         writeExcel.generateHeader();
         writeExcel.generateBody();
 
         writeExcel.flushData();
-        writeExcel.write(outputDire);
+    }
+
+    @Test
+    @Order(2)
+    public void writeData2(){
+        WriteExcel newSheet = writeExcel.newSheet("学生记录Sheet2");
+        newSheet.setSheetData(StudentInfoEntity.class,studentList);
+
+        newSheet.handlerCustomizeCellItem((workbook, sheet, cacheStyle, cellHelper) -> {
+            CellStyle cellStyle = workbook.createCellStyle();
+//            cellStyle.setBorderTop(BorderStyle.DOUBLE);
+//            cellStyle.setBorderRight(BorderStyle.DOUBLE);
+//            cellStyle.setBorderBottom(BorderStyle.DOUBLE);
+//            cellStyle.setBorderLeft(BorderStyle.DOUBLE);
+            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cellStyle.setFillBackgroundColor(IndexedColors.ORANGE.getIndex());
+
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(0, 0, 0, 3);
+            cellHelper.writeCellValue(cellRangeAddress,"我是基本信息列", cellStyle);
+
+        });
+
+        newSheet.generateHeader();
+        newSheet.generateBody();
+
+        newSheet.flushData();
+
     }
 
     /**
@@ -117,10 +150,8 @@ class WriteExcelTest {
      * @createDate 2021/10/4 12:01
      */
     @AfterAll
-    public static void afterAll(){
-
-
-
+    public static void afterAll() throws IOException {
+        writeExcel.write(outputDire);
     }
 
 }

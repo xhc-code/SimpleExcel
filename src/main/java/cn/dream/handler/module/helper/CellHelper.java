@@ -34,13 +34,19 @@ public class CellHelper {
         setValueCell.setValue(cell,value,null);
     }
 
+    public void writeCellValue(CellRangeAddress cellAddresses, Object value) {
+        writeCellValue(cellAddresses, value, null);
+    }
+
     /**
      * 写入合并单元格值
      * @param cellAddresses 合并单元格
+     *    {@link CellRangeAddress}
+     *
      * @param value 值
      */
-    public void writeCellValue(CellRangeAddress cellAddresses, Object value) throws ValueParseException {
-        writeCellValue(this.sheet,cellAddresses,value);
+    public void writeCellValue(CellRangeAddress cellAddresses, Object value,  CellStyle cellStyle) throws ValueParseException {
+        writeCellValue(this.sheet,cellAddresses,value, cellStyle);
     }
 
     public void setCellStyle(CellRangeAddress cellAddresses, CellStyle cellStyle) {
@@ -83,12 +89,16 @@ public class CellHelper {
      * @param value 合并单元格的值
      * @return
      */
-    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) throws ValueParseException {
+    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value, CellStyle cellStyle) throws ValueParseException {
         // 将合并单元格中的行和列的单元格对象统统创建出来
         for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
             for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
-                createCellIfNotExists(row,columnIndex);
+                Cell cellIfNotExists = createCellIfNotExists(row, columnIndex);
+                // 不为空则设置单元格的样式
+                if(cellStyle != null){
+                    cellIfNotExists.setCellStyle(cellStyle);
+                }
             }
         }
 

@@ -303,8 +303,8 @@ public class WriteExcel extends AbstractExcel<WriteExcel> {
     public WriteExcel newSheet(String sheetName) {
         WriteExcel writeExcel = new WriteExcel();
         writeExcel.embeddedObject = true;
-        writeExcel.createSheet(sheetName);
         ReflectionUtils.copyPropertiesByAnno(this,writeExcel);
+        writeExcel.createSheet(sheetName);
         writeExcel.initConsumer();
         return writeExcel;
     }

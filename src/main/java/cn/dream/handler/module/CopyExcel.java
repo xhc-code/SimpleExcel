@@ -53,8 +53,8 @@ public class CopyExcel extends AbstractExcel<CopyExcel> {
     public CopyExcel newSheet(String sheetName) {
         CopyExcel copyExcel = new CopyExcel();
         copyExcel.embeddedObject = true;
-        copyExcel.createSheet(sheetName);
         ReflectionUtils.copyPropertiesByAnno(this,copyExcel);
+        copyExcel.createSheet(sheetName);
         copyExcel.initConsumer();
         return copyExcel;
     }

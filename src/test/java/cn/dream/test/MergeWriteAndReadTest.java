@@ -110,20 +110,20 @@ public class MergeWriteAndReadTest {
         writeExcel.setSheetData(MergeStudentInfoEntity.class,studentTestEntityList);
 
         writeExcel.handlerCustomizeCellItem((workbook, sheet, putCellStyle, cellHelper) -> {
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,2,0,0),"用户UID");
+            cellHelper.writeCellValue(new CellRangeAddress(0,2,0,0),"用户UID");
 
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,0,1,4),"基本信息");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,1,1),"用户名称");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,2,2),"用户年龄");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,3,3),"用户性别");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,4,4),"生日日期");
+            cellHelper.writeCellValue(new CellRangeAddress(0,0,1,4),"基本信息");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,1,1),"用户名称");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,2,2),"用户年龄");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,3,3),"用户性别");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,4,4),"生日日期");
 
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(0,0,5,9),"其他信息");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,5,5),"记录日期");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,6,6),"创建ID");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,7,7),"创建名称");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,8,8),"审核状态");
-            cellHelper.writeCellValue(sheet,new CellRangeAddress(1,2,9,9),"是否公开");
+            cellHelper.writeCellValue(new CellRangeAddress(0,0,5,9),"其他信息");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,5,5),"记录日期");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,6,6),"创建ID");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,7,7),"创建名称");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,8,8),"审核状态");
+            cellHelper.writeCellValue(new CellRangeAddress(1,2,9,9),"是否公开");
 
 
 
