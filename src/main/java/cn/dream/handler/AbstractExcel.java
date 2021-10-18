@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * @param <T> 创建实例返回的对象的值
  */
 @Slf4j
-@SuppressWarnings({"rawtypes", "unchecked", "deprecation"})
+@SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractExcel<T> extends WorkbookPropScope {
 
     protected static final Field[] EMPTY_FIELDS = new Field[0];
@@ -609,22 +609,30 @@ public abstract class AbstractExcel<T> extends WorkbookPropScope {
      * @param cell 单元格对象
      */
     protected Object getCellValue(Cell cell) {
-        int cellType = cell.getCellType();
+        CellType cellType = cell.getCellType();
+
         Object value = null;
-        if(cellType == CellType.STRING.getCode()){
-            value = cell.getRichStringCellValue().getString();
-        }else if(cellType == CellType.NUMERIC.getCode()){
-            if (DateUtil.isCellDateFormatted(cell)) {
-                value = cell.getDateCellValue();
-            } else {
-                value = cell.getNumericCellValue();
-            }
-        }else if(cellType == CellType.BOOLEAN.getCode()){
-            value = cell.getBooleanCellValue();
-        }else if(cellType == CellType.FORMULA.getCode()){
-            value = cell.getCellFormula();
-        }else if(cellType == CellType.BLANK.getCode()){
-            value = "";
+        switch (cellType) {
+            case STRING:
+                value = cell.getRichStringCellValue().getString();
+                break;
+            case NUMERIC:
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    value = cell.getDateCellValue();
+                } else {
+                    value = cell.getNumericCellValue();
+                }
+                break;
+            case BOOLEAN:
+                value = cell.getBooleanCellValue();
+                break;
+            case FORMULA:
+                value = cell.getCellFormula();
+                break;
+            case BLANK:
+                value = "";
+                break;
+            default:
         }
         return value;
     }

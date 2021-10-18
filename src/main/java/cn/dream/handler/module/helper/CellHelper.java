@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 
 /**
@@ -85,6 +86,11 @@ public class CellHelper {
      */
     public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) throws ValueParseException {
         // 将合并单元格中的行和列的单元格对象统统创建出来
+        for (CellAddress cellAddress : cellAddresses) {
+            Row rowIfNotExists = createRowIfNotExists(sheet, cellAddress.getRow());
+            createCellIfNotExists(rowIfNotExists,cellAddress.getColumn());
+        }
+
         for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
             for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
@@ -106,12 +112,10 @@ public class CellHelper {
      * @param cellStyle 单元格样式
      */
     public static void setCellStyle(Sheet sheet,CellRangeAddress cellAddresses, CellStyle cellStyle){
-        for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
-            Row row = createRowIfNotExists(sheet,rowIndex);
-            for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
-                Cell cellIfNotExists = createCellIfNotExists(row, columnIndex);
-                cellIfNotExists.setCellStyle(cellStyle);
-            }
+        for (CellAddress cellAddress : cellAddresses) {
+            Row rowIfNotExists = createRowIfNotExists(sheet, cellAddress.getRow());
+            Cell cellIfNotExists = createCellIfNotExists(rowIfNotExists, cellAddress.getColumn());
+            cellIfNotExists.setCellStyle(cellStyle);
         }
     }
 
