@@ -109,7 +109,7 @@ public class MergeCellAndRead02Test {
 
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cellStyle.setFillForegroundColor(IndexedColors.GREY_80_PERCENT.getIndex());
+            cellStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
 
             cellHelper.setCellStyle(cellRangeAddress,cacheStyle.cache(cellStyle));
 
