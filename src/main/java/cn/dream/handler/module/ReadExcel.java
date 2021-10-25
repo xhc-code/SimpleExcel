@@ -360,8 +360,8 @@ public class ReadExcel extends AbstractExcel<ReadExcel> {
     public ReadExcel readSheet(String sheetName) {
         ReadExcel readExcel = new ReadExcel();
         readExcel.embeddedObject = true;
-        readExcel.toggleSheet(sheetName);
         ReflectionUtils.copyPropertiesByAnno(this,readExcel);
+        readExcel.toggleSheet(sheetName);
         readExcel.initConsumer();
         return readExcel;
     }

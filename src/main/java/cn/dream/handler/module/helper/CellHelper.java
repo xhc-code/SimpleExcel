@@ -10,6 +10,8 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 
+import java.util.function.Consumer;
+
 /**
  * 单元格工具，Cell工具类
  * @author xiaohuichao
@@ -35,13 +37,19 @@ public class CellHelper {
         setValueCell.setValue(cell,value,null);
     }
 
+    public void writeCellValue(CellRangeAddress cellAddresses, Object value) {
+        writeCellValue(cellAddresses, value, null);
+    }
+
     /**
      * 写入合并单元格值
      * @param cellAddresses 合并单元格
+     *    {@link CellRangeAddress}
+     *
      * @param value 值
      */
-    public void writeCellValue(CellRangeAddress cellAddresses, Object value) throws ValueParseException {
-        writeCellValue(this.sheet,cellAddresses,value);
+    public void writeCellValue(CellRangeAddress cellAddresses, Object value, CellStyle cellStyle) throws ValueParseException {
+        writeCellValue(this.sheet,cellAddresses,value, cellStyle,null,null);
     }
 
     public void setCellStyle(CellRangeAddress cellAddresses, CellStyle cellStyle) {
@@ -82,9 +90,12 @@ public class CellHelper {
      * 写入合并单元格的值
      * @param cellAddresses 合并单元格的范围
      * @param value 合并单元格的值
+     * @param cellStyle 设置到合并单元格中的CellStyle对象
+     * @param rowConsumer 合并单元格的值 行消费者，入参对象为Row对象
+     * @param cellConsumer 合并单元格的值 列消费者，入参对象为Cell对象
      * @return
      */
-    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value) throws ValueParseException {
+    public static void writeCellValue(Sheet sheet,CellRangeAddress cellAddresses, Object value, CellStyle cellStyle, Consumer<Row> rowConsumer,Consumer<Cell> cellConsumer) throws ValueParseException {
         // 将合并单元格中的行和列的单元格对象统统创建出来
         for (CellAddress cellAddress : cellAddresses) {
             Row rowIfNotExists = createRowIfNotExists(sheet, cellAddress.getRow());
@@ -93,8 +104,18 @@ public class CellHelper {
 
         for (int rowIndex = cellAddresses.getFirstRow(); rowIndex <= cellAddresses.getLastRow(); rowIndex++) {
             Row row = createRowIfNotExists(sheet,rowIndex);
+            if(rowConsumer != null){
+                rowConsumer.accept(row);
+            }
             for (int columnIndex = cellAddresses.getFirstColumn(); columnIndex <= cellAddresses.getLastColumn(); columnIndex++) {
-                createCellIfNotExists(row,columnIndex);
+                Cell cellIfNotExists = createCellIfNotExists(row, columnIndex);
+                // 不为空则设置单元格的样式
+                if(cellStyle != null){
+                    cellIfNotExists.setCellStyle(cellStyle);
+                }
+                if(cellConsumer != null){
+                    cellConsumer.accept(cellIfNotExists);
+                }
             }
         }
 
