@@ -108,8 +108,8 @@ public class MergeCellAndRead02Test {
             cellHelper.writeCellValue(cellRangeAddress,"我是跨列值");
 
             CellStyle cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cellStyle.setFillForegroundColor(IndexedColors.GREY_80_PERCENT.getIndex());
 
             cellHelper.setCellStyle(cellRangeAddress,cacheStyle.cache(cellStyle));
 

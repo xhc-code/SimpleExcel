@@ -2,6 +2,7 @@ package cn.dream.handler.module;
 
 import cn.dream.handler.module.entity.StudentInfoEntity;
 import cn.dream.util.DateUtils;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -125,12 +126,12 @@ class WriteExcelTest {
 
         newSheet.handlerCustomizeCellItem((workbook, sheet, cacheStyle, cellHelper) -> {
             CellStyle cellStyle = workbook.createCellStyle();
-//            cellStyle.setBorderTop(BorderStyle.DOUBLE);
-//            cellStyle.setBorderRight(BorderStyle.DOUBLE);
-//            cellStyle.setBorderBottom(BorderStyle.DOUBLE);
-//            cellStyle.setBorderLeft(BorderStyle.DOUBLE);
+            cellStyle.setBorderTop(BorderStyle.DOUBLE);
+            cellStyle.setBorderRight(BorderStyle.DOUBLE);
+            cellStyle.setBorderBottom(BorderStyle.DOUBLE);
+            cellStyle.setBorderLeft(BorderStyle.DOUBLE);
             cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            cellStyle.setFillBackgroundColor(IndexedColors.ORANGE.getIndex());
+            cellStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
 
             CellRangeAddress cellRangeAddress = new CellRangeAddress(0, 0, 0, 3);
             cellHelper.writeCellValue(cellRangeAddress,"我是基本信息列", cellStyle);
