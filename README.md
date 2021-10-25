@@ -1,7 +1,7 @@
 # SimpleExcel
 方便操作Excel,可同时对多Sheet进行操作,多个Excel对象的Sheet之前的操作是隔离的(需要使用者保证操作WordBook时必须是串行化的)
 
-> Excel简化操作的工具,基于Apache的POI进行包装开发
+> Excel简化操作的工具,基于Apache的POI 4.x进行包装开发
 
 # 因大陆网络制裁原因，可以访问 https://gitee.com/XingXiaoMeng/SimpleExcel 进行获取更新
 
